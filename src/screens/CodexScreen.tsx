@@ -122,6 +122,9 @@ const styles = StyleSheet.create({
   filterRow: {
     gap: 8,
     paddingBottom: 12,
+    // Without this the chips stretch to the scroll view's cross-axis height and the border
+    // ends up drawn straight through the label.
+    alignItems: "center",
   },
   filterChip: {
     borderWidth: 1,

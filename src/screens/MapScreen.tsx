@@ -11,8 +11,8 @@ import {
   isEntranceTile,
   isHealTile,
   findTilePosition,
-  type TileType,
 } from "../game/mapData";
+import { TileArt, PlayerSprite } from "../art/tileArt";
 import { PrimaryButton } from "./components/PrimaryButton";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { HoverTip } from "./components/HoverTip";
@@ -40,28 +40,6 @@ const DIRECTION_DELTA: Record<Direction, { dRow: number; dCol: number; glyph: st
   down: { dRow: 1, dCol: 0, glyph: "▼" },
   left: { dRow: 0, dCol: -1, glyph: "◀" },
   right: { dRow: 0, dCol: 1, glyph: "▶" },
-};
-
-/** Every biome tile (the ones that can trigger an encounter) is deliberately a world apart from
- * Path in both hue and value, and from each other, so no biome ever reads as "maybe just more
- * path" or gets confused for a different biome. */
-const TILE_COLORS: Record<TileType, string> = {
-  tree: "#0b2a1a",
-  path: "#9c8a6b",
-  entrance: "#4a3a6a",
-  grass: "#0c2e1a",
-  rock: "#5c5346",
-  water: "#1f4e79",
-  sand: "#d8c07a",
-  exit: "#7a5c2e",
-  heal: "#2e5c8a",
-};
-
-const BIOME_GLYPHS: Record<"grass" | "rock" | "water" | "sand", string> = {
-  grass: "🌿",
-  rock: "🪨",
-  water: "🌊",
-  sand: "🏜️",
 };
 
 /**
@@ -215,18 +193,14 @@ export function MapScreen({ navigation, route }: Props) {
           {map.rows.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.row}>
               {row.map((tile, colIndex) => (
-                <View key={colIndex} style={[styles.tile, { backgroundColor: TILE_COLORS[tile] }]}>
-                  {tile in BIOME_GLYPHS && (
-                    <Text style={styles.biomeGlyph}>{BIOME_GLYPHS[tile as keyof typeof BIOME_GLYPHS]}</Text>
-                  )}
-                  {tile === "heal" && <Text style={styles.healGlyph}>✚</Text>}
-                  {tile === "entrance" && <Text style={styles.entranceGlyph}>🚪</Text>}
+                <View key={colIndex} style={styles.tile}>
+                  <TileArt type={tile} seed={rowIndex * 31 + colIndex * 17} size={TILE_SIZE} />
                 </View>
               ))}
             </View>
           ))}
           <Animated.View testID="player-avatar" style={[styles.avatar, { transform: anim.getTranslateTransform() }]}>
-            <Text style={styles.avatarGlyph}>{DIRECTION_DELTA[facing].glyph}</Text>
+            <PlayerSprite facing={facing} size={TILE_SIZE} />
           </Animated.View>
         </Animated.View>
         <Animated.View
@@ -298,8 +272,7 @@ const styles = StyleSheet.create({
   tile: {
     width: TILE_SIZE,
     height: TILE_SIZE,
-    borderWidth: 0.5,
-    borderColor: "rgba(0,0,0,0.15)",
+    // No border: tiles are drawn art now, and a per-tile outline would grid the world up.
     alignItems: "center",
     justifyContent: "center",
   },
