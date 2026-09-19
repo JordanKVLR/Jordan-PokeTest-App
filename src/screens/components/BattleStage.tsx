@@ -1,11 +1,12 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import type { TypeName } from "../../data/schemas";
 import { HpBar } from "./HpBar";
 import { TypeBadge } from "./TypeBadge";
 import { CreatureAvatar } from "./CreatureAvatar";
 import type { useCombatantAnimation } from "./useCombatantAnimation";
+import { BattleBackdrop, BattlePlatform } from "../../art/battleArt";
+import type { Biome } from "../../data/schemas";
 import { colors, typeColor, typeIcon } from "../theme";
 
 const STAGE_HEIGHT = 220;
@@ -49,6 +50,8 @@ interface CombatantProps {
 interface Props {
   enemy: CombatantProps;
   player: CombatantProps;
+  /** Which landscape to fight in front of. Defaults to inland if a caller doesn't say. */
+  biome?: Biome;
 }
 
 /**
@@ -58,7 +61,7 @@ interface Props {
  * arcs the same path. There's still no illustrated sprite art (see CreatureAvatar) — this is about
  * layout and motion reading like a real battle, not a sprite upgrade.
  */
-export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleStage({ enemy, player }, ref) {
+export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleStage({ enemy, player, biome = "grass" }, ref) {
   const [stageWidth, setStageWidth] = useState(FALLBACK_STAGE_WIDTH);
 
   const [projectileType, setProjectileType] = useState<TypeName>("Normal");
@@ -107,8 +110,14 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
 
   return (
     <View style={styles.stage} onLayout={(e) => setStageWidth(e.nativeEvent.layout.width)}>
-      <LinearGradient colors={["#16324f", "#2c5170"]} style={StyleSheet.absoluteFillObject} />
-      <View style={styles.ground} />
+      <BattleBackdrop biome={biome} width={stageWidth} height={STAGE_HEIGHT} />
+
+      <View pointerEvents="none" style={[styles.platform, styles.enemyPlatform]}>
+        <BattlePlatform size={ENEMY_AVATAR_SIZE * 1.5} biome={biome} />
+      </View>
+      <View pointerEvents="none" style={[styles.platform, styles.playerPlatform]}>
+        <BattlePlatform size={PLAYER_AVATAR_SIZE * 1.45} biome={biome} />
+      </View>
 
       <View style={[styles.infoBox, styles.enemyInfoBox]}>
         <View style={styles.infoHeader}>
@@ -252,23 +261,33 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
   },
-  ground: {
+  platform: {
     position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: STAGE_HEIGHT * 0.32,
-    backgroundColor: "#2f3b2a",
+    alignItems: "center",
   },
+  enemyPlatform: {
+    top: ENEMY_TOP + ENEMY_AVATAR_SIZE - 14,
+    right: ENEMY_RIGHT - ENEMY_AVATAR_SIZE * 0.25,
+  },
+  playerPlatform: {
+    bottom: PLAYER_BOTTOM - 12,
+    left: PLAYER_LEFT - PLAYER_AVATAR_SIZE * 0.22,
+  },
+  // Light plaques over a bright outdoor scene, sized to leave the sprites clear.
   infoBox: {
     position: "absolute",
-    width: "56%",
-    backgroundColor: "rgba(13,27,42,0.82)",
+    width: "48%",
+    backgroundColor: "rgba(255,255,255,0.92)",
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 10,
-    gap: 4,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    gap: 3,
+    shadowColor: colors.shadow,
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   enemyInfoBox: {
     top: 12,
@@ -287,12 +306,13 @@ const styles = StyleSheet.create({
   },
   infoName: {
     color: colors.text,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
   },
   infoLevel: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: "700",
   },
   badgeRow: {
     flexDirection: "row",

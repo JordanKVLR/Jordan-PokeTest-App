@@ -524,6 +524,7 @@ export function BattleScreen({ navigation, route }: Props) {
     <View style={styles.container}>
       <BattleStage
         ref={stageRef}
+        biome={biome}
         enemy={{
           speciesId: enemy.creature.speciesId,
           name: `Wild ${enemy.displayName}`,
@@ -788,9 +789,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   log: {
-    flex: 1,
+    // Capped rather than flex:1 — the log only ever holds a few lines, and letting it grow
+    // left a tall empty panel between the stage and the move buttons.
+    flexGrow: 0,
+    minHeight: 84,
+    maxHeight: 132,
     backgroundColor: colors.surfaceAlt,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 12,
   },
   logContent: {
