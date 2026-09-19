@@ -1,14 +1,265 @@
 {
   "moves": [
-    { "id": "tackle", "name": "Tackle", "type": "Normal", "category": "physical", "power": 40, "accuracy": 100, "basePriority": 0 },
-    { "id": "vine_lash", "name": "Vine Lash", "type": "Grass", "category": "physical", "power": 55, "accuracy": 90, "basePriority": 0 },
-    { "id": "ember", "name": "Ember", "type": "Fire", "category": "special", "power": 55, "accuracy": 90, "basePriority": 0 },
-    { "id": "water_jet", "name": "Water Jet", "type": "Water", "category": "physical", "power": 55, "accuracy": 90, "basePriority": 0 },
-    { "id": "spark", "name": "Spark", "type": "Electric", "category": "special", "power": 55, "accuracy": 90, "basePriority": 0 },
-    { "id": "rock_throw", "name": "Rock Throw", "type": "Rock", "category": "physical", "power": 65, "accuracy": 80, "basePriority": 0 },
-    { "id": "shadow_snap", "name": "Shadow Snap", "type": "Ghost", "category": "special", "power": 55, "accuracy": 90, "basePriority": 0 },
-    { "id": "metal_claw", "name": "Metal Claw", "type": "Steel", "category": "physical", "power": 55, "accuracy": 90, "basePriority": 0 },
-    { "id": "bug_bite", "name": "Bug Bite", "type": "Bug", "category": "physical", "power": 55, "accuracy": 90, "basePriority": 0 },
-    { "id": "sand_blast", "name": "Sand Blast", "type": "Ground", "category": "physical", "power": 55, "accuracy": 90, "basePriority": 0 }
+    {
+      "id": "tackle",
+      "name": "Tackle",
+      "type": "Normal",
+      "category": "physical",
+      "power": 40,
+      "accuracy": 100,
+      "basePriority": 0
+    },
+    {
+      "id": "vine_lash",
+      "name": "Vine Lash",
+      "type": "Grass",
+      "category": "physical",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "ember",
+      "name": "Ember",
+      "type": "Fire",
+      "category": "special",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "water_jet",
+      "name": "Water Jet",
+      "type": "Water",
+      "category": "physical",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "spark",
+      "name": "Spark",
+      "type": "Electric",
+      "category": "special",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "rock_throw",
+      "name": "Rock Throw",
+      "type": "Rock",
+      "category": "physical",
+      "power": 65,
+      "accuracy": 80,
+      "basePriority": 0
+    },
+    {
+      "id": "shadow_snap",
+      "name": "Shadow Snap",
+      "type": "Ghost",
+      "category": "special",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "metal_claw",
+      "name": "Metal Claw",
+      "type": "Steel",
+      "category": "physical",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "bug_bite",
+      "name": "Bug Bite",
+      "type": "Bug",
+      "category": "physical",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "sand_blast",
+      "name": "Sand Blast",
+      "type": "Ground",
+      "category": "physical",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "psy_pulse",
+      "name": "Oracle Pulse",
+      "type": "Psychic",
+      "category": "special",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "venom_spit",
+      "name": "Venom Spit",
+      "type": "Poison",
+      "category": "special",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "gale_dive",
+      "name": "Gale Dive",
+      "type": "Flying",
+      "category": "physical",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "palm_strike",
+      "name": "Palm Strike",
+      "type": "Fighting",
+      "category": "physical",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "glimmer",
+      "name": "Glimmer",
+      "type": "Fairy",
+      "category": "special",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "night_veil",
+      "name": "Night Veil",
+      "type": "Dark",
+      "category": "special",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "frost_chip",
+      "name": "Frost Chip",
+      "type": "Ice",
+      "category": "special",
+      "power": 55,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "wyrm_surge",
+      "name": "Wyrm Surge",
+      "type": "Dragon",
+      "category": "special",
+      "power": 60,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "trilithon_slam",
+      "name": "Trilithon Slam",
+      "type": "Rock",
+      "category": "physical",
+      "power": 75,
+      "accuracy": 80,
+      "basePriority": 0
+    },
+    {
+      "id": "tyrian_dye",
+      "name": "Tyrian Dye",
+      "type": "Poison",
+      "category": "special",
+      "power": 70,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "harbour_swell",
+      "name": "Harbour Swell",
+      "type": "Water",
+      "category": "special",
+      "power": 70,
+      "accuracy": 85,
+      "basePriority": 0
+    },
+    {
+      "id": "mosaic_shard",
+      "name": "Mosaic Shard",
+      "type": "Rock",
+      "category": "special",
+      "power": 65,
+      "accuracy": 95,
+      "basePriority": 0
+    },
+    {
+      "id": "legion_charge",
+      "name": "Legion Charge",
+      "type": "Fighting",
+      "category": "physical",
+      "power": 75,
+      "accuracy": 85,
+      "basePriority": 0
+    },
+    {
+      "id": "honey_snare",
+      "name": "Honey Snare",
+      "type": "Bug",
+      "category": "special",
+      "power": 65,
+      "accuracy": 95,
+      "basePriority": 0
+    },
+    {
+      "id": "noria_jet",
+      "name": "Noria Jet",
+      "type": "Water",
+      "category": "physical",
+      "power": 70,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "cross_guard",
+      "name": "Cross Guard",
+      "type": "Steel",
+      "category": "physical",
+      "power": 70,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "siege_volley",
+      "name": "Siege Volley",
+      "type": "Fire",
+      "category": "special",
+      "power": 75,
+      "accuracy": 80,
+      "basePriority": 0
+    },
+    {
+      "id": "scimitar_arc",
+      "name": "Scimitar Arc",
+      "type": "Dark",
+      "category": "physical",
+      "power": 70,
+      "accuracy": 90,
+      "basePriority": 0
+    },
+    {
+      "id": "signal_flare",
+      "name": "Signal Flare",
+      "type": "Flying",
+      "category": "special",
+      "power": 70,
+      "accuracy": 90,
+      "basePriority": 0
+    }
   ]
 }

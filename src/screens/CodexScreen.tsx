@@ -3,8 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { useGameStore } from "../state/gameStore";
-import { DEX_ENTRIES } from "../game/speciesCatalog";
-import type { TypeName } from "../data/schemas";
+import { DEX_ENTRIES, ERA_LABELS, ERA_ORDER } from "../game/speciesCatalog";
+import type { Era, TypeName } from "../data/schemas";
 import { TypeBadge } from "./components/TypeBadge";
 import { CreatureAvatar } from "./components/CreatureAvatar";
 import { PrimaryButton } from "./components/PrimaryButton";
@@ -20,13 +20,20 @@ export function CodexScreen({ navigation }: Props) {
   const seenSpeciesIds = useGameStore((s) => s.seenSpeciesIds);
   const caughtSpeciesIds = useGameStore((s) => s.caughtSpeciesIds);
   const [typeFilter, setTypeFilter] = useState<TypeName | null>(null);
+  const [eraFilter, setEraFilter] = useState<Era | null>(null);
 
   useKeyboardShortcuts({ m: () => navigation.popToTop() });
 
   const entries = useMemo(
-    () => (typeFilter ? DEX_ENTRIES.filter((e) => e.types.includes(typeFilter)) : DEX_ENTRIES),
-    [typeFilter]
+    () =>
+      DEX_ENTRIES.filter(
+        (e) => (!typeFilter || e.types.includes(typeFilter)) && (!eraFilter || e.era === eraFilter)
+      ),
+    [typeFilter, eraFilter]
   );
+
+  /** Only offer era chips for eras that actually have creatures in them. */
+  const eras = useMemo(() => ERA_ORDER.filter((era) => DEX_ENTRIES.some((e) => e.era === era)), []);
 
   const seenCount = DEX_ENTRIES.filter((e) => seenSpeciesIds.includes(e.speciesId)).length;
 
@@ -37,7 +44,35 @@ export function CodexScreen({ navigation }: Props) {
         {seenCount} / {DEX_ENTRIES.length} seen · {caughtSpeciesIds.length} / {DEX_ENTRIES.length} caught
       </Text>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
+        contentContainerStyle={styles.filterRow}>
+        <Pressable
+          testID="era-filter-all"
+          onPress={() => setEraFilter(null)}
+          style={[styles.filterChip, eraFilter === null && styles.filterChipActive]}
+        >
+          <Text style={styles.filterChipText}>All eras</Text>
+        </Pressable>
+        {eras.map((era) => (
+          <Pressable
+            key={era}
+            testID={`era-filter-${era}`}
+            onPress={() => setEraFilter(era)}
+            style={[styles.filterChip, eraFilter === era && styles.filterChipActive]}
+          >
+            <Text style={styles.filterChipText}>{ERA_LABELS[era].split(" · ")[0]}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
+        contentContainerStyle={styles.filterRow}>
         <Pressable
           onPress={() => setTypeFilter(null)}
           style={[styles.filterChip, typeFilter === null && styles.filterChipActive]}
@@ -90,6 +125,9 @@ export function CodexScreen({ navigation }: Props) {
               ) : (
                 <Text style={styles.unseen}>Not yet encountered</Text>
               )}
+              {revealed && entry.era && entry.era !== "wild" && (
+                <Text style={styles.eraLabel}>{ERA_LABELS[entry.era]}</Text>
+              )}
               {caught && <Text style={styles.caughtLabel}>Caught</Text>}
               {seen && !caught && <Text style={styles.seenLabel}>Seen</Text>}
             </Pressable>
@@ -118,6 +156,19 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     marginBottom: 10,
+  },
+  eraLabel: {
+    color: colors.accentDeep,
+    fontSize: 10,
+    fontWeight: "700",
+    marginTop: 4,
+  },
+  // A horizontal ScrollView stretches to fill the cross axis by default, which on web left a
+  // tall empty band under each chip row. Pin it to its content height instead.
+  filterScroll: {
+    flexGrow: 0,
+    flexShrink: 0,
+    alignSelf: "stretch",
   },
   filterRow: {
     gap: 8,

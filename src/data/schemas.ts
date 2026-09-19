@@ -127,6 +127,24 @@ export const ItemsFileSchema = z.object({
   items: z.array(ItemDataSchema),
 });
 
+/**
+ * Which layer of Maltese history a creature belongs to. The islands have been continuously
+ * inhabited for seven millennia and every occupier left something behind, so the roster is
+ * organised the way the archaeology is: by era. "wild" covers the creatures that are just
+ * fauna, belonging to no particular period.
+ */
+export const EraSchema = z.enum([
+  "wild",
+  "neolithic",
+  "bronze",
+  "phoenician",
+  "roman",
+  "arab",
+  "knights",
+  "ottoman",
+  "british",
+]);
+
 export const WildCreatureSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -135,6 +153,11 @@ export const WildCreatureSchema = z.object({
   baseStats: StatBlockSchema,
   moveIds: z.array(z.string()).min(1).max(4),
   biome: BiomeSchema,
+  era: EraSchema.default("wild"),
+  /** Level this creature evolves at. Omitted (or null) means it never evolves. */
+  evolvesAtLevel: z.number().int().positive().nullable().optional(),
+  /** Species id this evolves into; required whenever evolvesAtLevel is set. */
+  evolvesInto: z.string().nullable().optional(),
 });
 
 export const WildCreaturesFileSchema = z.object({
@@ -153,3 +176,4 @@ export type MoveData = z.infer<typeof MoveDataSchema>;
 export type ItemCategory = z.infer<typeof ItemCategorySchema>;
 export type ItemData = z.infer<typeof ItemDataSchema>;
 export type WildCreature = z.infer<typeof WildCreatureSchema>;
+export type Era = z.infer<typeof EraSchema>;

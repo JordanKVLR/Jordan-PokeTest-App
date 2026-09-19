@@ -23,7 +23,7 @@ function makeMember(overrides: Partial<PartyMember> = {}): PartyMember {
 }
 
 describe("checkEvolution", () => {
-  it("returns null for a non-starter species", () => {
+  it("returns null for a species with no evolution line at all", () => {
     expect(checkEvolution("fossary", 100)).toBeNull();
   });
 
@@ -39,6 +39,30 @@ describe("checkEvolution", () => {
   it("returns null for an already-final stage", () => {
     expect(checkEvolution("mosstaur", 100)).toBeNull();
   });
+
+  it("returns null for an unknown species id", () => {
+    expect(checkEvolution("not_a_real_species", 99)).toBeNull();
+  });
+});
+
+describe("checkEvolution for wild-creature lines", () => {
+  it("does not evolve a wild creature below its threshold", () => {
+    expect(checkEvolution("murexil", 27)).toBeNull();
+  });
+
+  it("evolves a wild creature at its threshold", () => {
+    const next = checkEvolution("murexil", 28);
+    expect(next?.nextSpeciesId).toBe("tirjanu");
+    expect(next?.nextName).toBe("Tirjanu");
+    expect(next?.nextTypes).toEqual(["Water", "Poison"]);
+  });
+
+  it("walks a three-stage wild line one hop at a time", () => {
+    expect(checkEvolution("skudier", 27)?.nextSpeciesId).toBe("kavallier");
+    expect(checkEvolution("kavallier", 41)).toBeNull();
+    expect(checkEvolution("kavallier", 42)?.nextSpeciesId).toBe("granmastru");
+    expect(checkEvolution("granmastru", 99)).toBeNull();
+  });
 });
 
 describe("defaultDisplayNameForSpecies", () => {
@@ -47,8 +71,35 @@ describe("defaultDisplayNameForSpecies", () => {
     expect(defaultDisplayNameForSpecies("vinehorn")).toBe("Vinehorn");
   });
 
-  it("returns null for a non-starter species", () => {
-    expect(defaultDisplayNameForSpecies("fossary")).toBeNull();
+  it("returns the species name for a wild creature", () => {
+    expect(defaultDisplayNameForSpecies("fossary")).toBe("Fossary");
+    expect(defaultDisplayNameForSpecies("murexil")).toBe("Murexil");
+  });
+
+  it("returns null for an unknown species id", () => {
+    expect(defaultDisplayNameForSpecies("not_a_real_species")).toBeNull();
+  });
+});
+
+describe("creature data integrity", () => {
+  it("every evolvesInto points at a real species, and lines terminate", () => {
+    // checkEvolution throws on a dangling evolvesInto, so walking every line proves the data.
+    const { CREATURE_DESIGNS } = require("../../art/creatureDesigns");
+    const wild = require("../../data/wildCreatures.json").wildCreatures as Array<{
+      id: string;
+      evolvesAtLevel?: number | null;
+    }>;
+    for (const creature of wild) {
+      let id = creature.id;
+      for (let hops = 0; hops < 10; hops++) {
+        const next = checkEvolution(id, 100);
+        if (!next) break;
+        id = next.nextSpeciesId;
+        expect(hops).toBeLessThan(5); // a cycle would spin here
+      }
+      // Every species also needs art, or it renders as a generic type-coloured fallback.
+      expect(CREATURE_DESIGNS[creature.id]).toBeDefined();
+    }
   });
 });
 

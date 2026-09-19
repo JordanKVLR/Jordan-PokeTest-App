@@ -124,6 +124,105 @@ export const CREATURE_DESIGNS: Record<string, CreatureDesign> = {
     propColor: "#bfa172",
   },
   siroccus: { body: "avian", primary: "#d9b06a", secondary: "#f7e6c0", crest: "plume", tail: "fan", eyes: "fierce" },
+
+  // ================================================================ temple builders
+  dormina: { body: "blob", primary: "#cbb3e0", secondary: "#f0e4f7", eyes: "sleepy" },
+  ggantroll: {
+    body: "golem",
+    primary: "#c9a878",
+    secondary: "#eeddb4",
+    eyes: "fierce",
+    pattern: "plates",
+    prop: "megalith",
+    propColor: "#b08f5e",
+  },
+
+  // ================================================================ bronze age
+  bornadur: { body: "golem", primary: "#8f7f6a", secondary: "#c3b59f", eyes: "fierce", pattern: "plates" },
+  kartrutt: { body: "mollusc", primary: "#b9a274", secondary: "#e6d7b4", pattern: "plates" },
+
+  // ================================================================ phoenician & punic
+  murexil: { body: "mollusc", primary: "#9a6bb5", secondary: "#e3cdf0", prop: "spiralShell", propColor: "#7d4c99" },
+  tirjanu: {
+    body: "mollusc",
+    primary: "#6b3f85",
+    secondary: "#d3b4e3",
+    pattern: "waves",
+    eyes: "fierce",
+    prop: "spiralShell",
+    propColor: "#4e2a63",
+  },
+  lembuqa: { body: "vessel", primary: "#7a6ba8", secondary: "#d8d0ee", prop: "sail", propColor: "#e8dfc0" },
+  ghajnuq: { body: "blob", primary: "#4a90e2", secondary: "#cfe6fa", eyes: "wide", prop: "eyeOfOsiris", propColor: "#2f6fb5" },
+
+  // ================================================================ roman
+  tessera: { body: "blob", primary: "#d8c9a8", secondary: "#f3ead4", pattern: "mosaic", eyes: "wide" },
+  mosaikos: {
+    body: "golem",
+    primary: "#c9b48d",
+    secondary: "#efe2c4",
+    pattern: "mosaic",
+    eyes: "glow",
+    prop: "mosaicCrown",
+    propColor: "#b1633f",
+  },
+  amforu: { body: "blob", primary: "#c96b47", secondary: "#f0c6a8", prop: "amphora", propColor: "#a8512f" },
+  laurentu: { body: "biped", primary: "#7ba83c", secondary: "#dcecb4", eyes: "fierce", prop: "laurel", propColor: "#5f8c2c" },
+  vipaulus: { body: "serpent", primary: "#6b7a4a", secondary: "#cfd8ae", eyes: "fierce", crest: "none" },
+
+  // ================================================================ arab period
+  ghasel: { body: "insect", primary: "#e8b93c", secondary: "#fdefc0", pattern: "stripes", prop: "honeycomb", propColor: "#d99a1f" },
+  nahlija: {
+    body: "insect",
+    primary: "#f0c94a",
+    secondary: "#fff3cf",
+    pattern: "stripes",
+    crest: "antennae",
+    eyes: "fierce",
+    prop: "honeycomb",
+    propColor: "#e0a516",
+  },
+  larinja: { body: "blob", primary: "#f0913c", secondary: "#ffe0bd", prop: "citrus", propColor: "#f0a83c" },
+  sienja: { body: "golem", primary: "#9aa7b5", secondary: "#dfe7ee", prop: "waterwheel", propColor: "#6b93a8" },
+
+  // ================================================================ order of st john
+  skudier: { body: "biped", primary: "#b0bcc9", secondary: "#e8eef4", prop: "malteseCross", propColor: "#e8e2d4" },
+  kavallier: {
+    body: "biped",
+    primary: "#9aa7b5",
+    secondary: "#dde5ec",
+    eyes: "fierce",
+    prop: "knightHelm",
+    propColor: "#aebbc7",
+  },
+  granmastru: {
+    body: "biped",
+    primary: "#8d99ae",
+    secondary: "#d7dfe8",
+    crest: "plume",
+    eyes: "glow",
+    prop: "knightHelm",
+    propColor: "#c2a24a",
+  },
+  falkun: {
+    body: "avian",
+    primary: "#a8927a",
+    secondary: "#ecdfc9",
+    crest: "plume",
+    tail: "fan",
+    eyes: "fierce",
+    prop: "malteseCross",
+    propColor: "#e8e2d4",
+  },
+
+  // ================================================================ great siege
+  jannisar: { body: "biped", primary: "#d4563c", secondary: "#f7c9a8", eyes: "fierce", prop: "turban", propColor: "#efe6d2" },
+  bombarda: { body: "golem", primary: "#7a8590", secondary: "#c4ccd4", eyes: "fierce", pattern: "plates", prop: "cannon", propColor: "#5c666f" },
+  hilalux: { body: "avian", primary: "#5a5670", secondary: "#b9b4cf", crest: "plume", tail: "fan", eyes: "glow", prop: "crescent", propColor: "#e8d98a" },
+
+  // ================================================================ british period
+  pustaljon: { body: "golem", primary: "#cf4740", secondary: "#f2b3ad", pattern: "plates" },
+  konvoj: { body: "vessel", primary: "#6b7a85", secondary: "#ccd8df", pattern: "waves", prop: "sail", propColor: "#b9c4cc" },
 };
 
 /** Body archetype guessed from a type, for any species without an authored design. */

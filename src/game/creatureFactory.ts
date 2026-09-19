@@ -1,11 +1,19 @@
 import startersData from "../data/starters.json";
-import { StartersFileSchema, type StarterLine, type StatBlock, type TypeName } from "../data/schemas";
+import wildCreaturesData from "../data/wildCreatures.json";
+import {
+  StartersFileSchema,
+  WildCreaturesFileSchema,
+  type StarterLine,
+  type StatBlock,
+  type TypeName,
+} from "../data/schemas";
 import type { Creature } from "../engine/types";
 import { NEUTRAL_STAT_STAGES } from "../engine/types";
 import { STARTER_MOVESETS } from "./movesRepo";
 import { effectiveStats } from "./progression";
 
 const starters = StartersFileSchema.parse(startersData).starters;
+const wildCreatures = WildCreaturesFileSchema.parse(wildCreaturesData).wildCreatures;
 
 export type StarterLineName = "Grass" | "Fire" | "Water";
 
@@ -78,9 +86,7 @@ export interface EvolutionCandidate {
   nextBaseStats: StatBlock;
 }
 
-/** Finds which starter line/stage a speciesId belongs to, if any — non-starter species (every
- * wild creature, regional variant, and legendary) never evolve, since only starters.json carries
- * stage/evolvesAtLevel data. */
+/** Finds which starter line/stage a speciesId belongs to, if any. */
 function findStarterStage(speciesId: string): { line: StarterLine; stageIndex: number } | null {
   for (const line of starters) {
     const stageIndex = line.stages.findIndex((s) => s.id === speciesId);
@@ -89,30 +95,57 @@ function findStarterStage(speciesId: string): { line: StarterLine; stageIndex: n
   return null;
 }
 
-/** The stage's own default display name (used to detect whether a party member has been given a
- * custom nickname — if its displayName no longer matches this, evolution must not overwrite it). */
-export function defaultDisplayNameForSpecies(speciesId: string): string | null {
-  const found = findStarterStage(speciesId);
-  return found ? found.line.stages[found.stageIndex].name : null;
+function findWildCreature(speciesId: string) {
+  return wildCreatures.find((w) => w.id === speciesId) ?? null;
 }
 
-/** Returns the next evolution stage for a species at the given level, or null if it doesn't
- * evolve here — a non-starter species, an already-final stage, or a level below the threshold.
- * Callers should loop this (see party.ts) since a large level jump can cross more than one
- * threshold at once. */
+/** The species' own default display name (used to detect whether a party member has been given a
+ * custom nickname — if its displayName no longer matches this, evolution must not overwrite it).
+ * Null for a species from neither source, which simply means "never auto-rename it". */
+export function defaultDisplayNameForSpecies(speciesId: string): string | null {
+  const starter = findStarterStage(speciesId);
+  if (starter) return starter.line.stages[starter.stageIndex].name;
+  return findWildCreature(speciesId)?.name ?? null;
+}
+
+/**
+ * Returns the next evolution stage for a species at the given level, or null if it doesn't
+ * evolve here — a species with no line, an already-final stage, or a level below the threshold.
+ *
+ * Two kinds of line feed this: the three starter lines (ordered stages in starters.json) and
+ * wild creatures that point at their next form with evolvesAtLevel/evolvesInto. Callers should
+ * loop this (see party.ts) since a large level jump can cross more than one threshold at once.
+ */
 export function checkEvolution(speciesId: string, level: number): EvolutionCandidate | null {
-  const found = findStarterStage(speciesId);
-  if (!found) return null;
-  const { line, stageIndex } = found;
-  const currentStage = line.stages[stageIndex];
-  if (currentStage.evolvesAtLevel === null || level < currentStage.evolvesAtLevel) return null;
-  const nextStage = line.stages[stageIndex + 1];
-  if (!nextStage) return null;
+  const starter = findStarterStage(speciesId);
+  if (starter) {
+    const { line, stageIndex } = starter;
+    const currentStage = line.stages[stageIndex];
+    if (currentStage.evolvesAtLevel === null || level < currentStage.evolvesAtLevel) return null;
+    const nextStage = line.stages[stageIndex + 1];
+    if (!nextStage) return null;
+    return {
+      nextSpeciesId: nextStage.id,
+      nextName: nextStage.name,
+      nextTypes: nextStage.types,
+      nextBaseStats: nextStage.baseStats,
+    };
+  }
+
+  const wild = findWildCreature(speciesId);
+  if (!wild || !wild.evolvesAtLevel || !wild.evolvesInto) return null;
+  if (level < wild.evolvesAtLevel) return null;
+  const next = findWildCreature(wild.evolvesInto);
+  if (!next) {
+    // Data error rather than a silent no-op: an evolvesInto pointing nowhere means the line is
+    // broken, and a creature that can never finish evolving is worth failing loudly over.
+    throw new Error(`Creature "${speciesId}" evolves into unknown species "${wild.evolvesInto}"`);
+  }
   return {
-    nextSpeciesId: nextStage.id,
-    nextName: nextStage.name,
-    nextTypes: nextStage.types,
-    nextBaseStats: nextStage.baseStats,
+    nextSpeciesId: next.id,
+    nextName: next.name,
+    nextTypes: next.types,
+    nextBaseStats: next.baseStats,
   };
 }
 

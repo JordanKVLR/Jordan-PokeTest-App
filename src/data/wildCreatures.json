@@ -3,146 +3,1002 @@
     {
       "id": "fossary",
       "name": "Fossary",
-      "types": ["Bug", "Grass"],
+      "types": [
+        "Bug",
+        "Grass"
+      ],
       "flavor": "A garrigue-shell beetle that grazes the Buskett scrubland; the ridges on its back are said to mirror the megaliths.",
-      "baseStats": { "hp": 70, "atk": 75, "def": 80, "spatk": 55, "spdef": 70, "speed": 65 },
-      "moveIds": ["bug_bite", "vine_lash", "tackle"],
-      "biome": "grass"
+      "baseStats": {
+        "hp": 70,
+        "atk": 75,
+        "def": 80,
+        "spatk": 55,
+        "spdef": 70,
+        "speed": 65
+      },
+      "moveIds": [
+        "bug_bite",
+        "vine_lash",
+        "tackle"
+      ],
+      "biome": "grass",
+      "era": "wild"
     },
     {
       "id": "qortong",
       "name": "Qortong",
-      "types": ["Rock"],
+      "types": [
+        "Rock"
+      ],
       "flavor": "A fist-sized nodule of hardened globigerina limestone that shuffles across quarry floors.",
-      "baseStats": { "hp": 60, "atk": 65, "def": 95, "spatk": 30, "spdef": 60, "speed": 25 },
-      "moveIds": ["rock_throw", "tackle"],
-      "biome": "rock"
+      "baseStats": {
+        "hp": 60,
+        "atk": 65,
+        "def": 95,
+        "spatk": 30,
+        "spdef": 60,
+        "speed": 25
+      },
+      "moveIds": [
+        "rock_throw",
+        "tackle"
+      ],
+      "biome": "rock",
+      "era": "wild"
     },
     {
       "id": "xrobbog",
       "name": "Xrobbog",
-      "types": ["Rock", "Ground"],
+      "types": [
+        "Rock",
+        "Ground"
+      ],
       "flavor": "Nests in the loose scree below the cliffs; a stomp triggers a small rockslide it rides downhill.",
-      "baseStats": { "hp": 70, "atk": 85, "def": 75, "spatk": 35, "spdef": 50, "speed": 65 },
-      "moveIds": ["rock_throw", "sand_blast", "tackle"],
-      "biome": "rock"
+      "baseStats": {
+        "hp": 70,
+        "atk": 85,
+        "def": 75,
+        "spatk": 35,
+        "spdef": 50,
+        "speed": 65
+      },
+      "moveIds": [
+        "rock_throw",
+        "sand_blast",
+        "tackle"
+      ],
+      "biome": "rock",
+      "era": "wild"
     },
     {
       "id": "karkarun",
       "name": "Karkarun",
-      "types": ["Rock"],
+      "types": [
+        "Rock"
+      ],
       "flavor": "Mistaken for an ordinary standing stone until it turns to face you; the old megaliths are said to count visitors.",
-      "baseStats": { "hp": 85, "atk": 90, "def": 110, "spatk": 40, "spdef": 70, "speed": 30 },
-      "moveIds": ["rock_throw", "tackle"],
-      "biome": "rock"
+      "baseStats": {
+        "hp": 85,
+        "atk": 90,
+        "def": 110,
+        "spatk": 40,
+        "spdef": 70,
+        "speed": 30
+      },
+      "moveIds": [
+        "rock_throw",
+        "tackle"
+      ],
+      "biome": "rock",
+      "era": "neolithic"
     },
     {
       "id": "bulqajra",
       "name": "Bulqajra",
-      "types": ["Rock", "Fighting"],
+      "types": [
+        "Rock",
+        "Fighting"
+      ],
       "flavor": "Rolls itself into a boulder to travel, then unfurls two stone fists the moment it stops.",
-      "baseStats": { "hp": 80, "atk": 105, "def": 85, "spatk": 30, "spdef": 55, "speed": 45 },
-      "moveIds": ["rock_throw", "tackle"],
-      "biome": "rock"
+      "baseStats": {
+        "hp": 80,
+        "atk": 105,
+        "def": 85,
+        "spatk": 30,
+        "spdef": 55,
+        "speed": 45
+      },
+      "moveIds": [
+        "rock_throw",
+        "tackle"
+      ],
+      "biome": "rock",
+      "era": "wild"
     },
     {
       "id": "santwarr",
       "name": "Santwarr",
-      "types": ["Rock", "Psychic"],
+      "types": [
+        "Rock",
+        "Psychic"
+      ],
       "flavor": "Said to wake only when the solstice light lines up with the temple's inner chamber, same as the old stones themselves.",
-      "baseStats": { "hp": 90, "atk": 80, "def": 100, "spatk": 75, "spdef": 85, "speed": 40 },
-      "moveIds": ["rock_throw", "tackle"],
-      "biome": "rock"
+      "baseStats": {
+        "hp": 90,
+        "atk": 80,
+        "def": 100,
+        "spatk": 75,
+        "spdef": 85,
+        "speed": 40
+      },
+      "moveIds": [
+        "rock_throw",
+        "tackle"
+      ],
+      "biome": "rock",
+      "era": "neolithic"
     },
     {
       "id": "luzzitt",
       "name": "Luzzitt",
-      "types": ["Water"],
+      "types": [
+        "Water"
+      ],
       "flavor": "A silver harbour-fish that leaps in the wake of the luzzu boats, chasing scraps thrown from the stern.",
-      "baseStats": { "hp": 65, "atk": 55, "def": 50, "spatk": 70, "spdef": 55, "speed": 70 },
-      "moveIds": ["water_jet", "tackle"],
-      "biome": "water"
+      "baseStats": {
+        "hp": 65,
+        "atk": 55,
+        "def": 50,
+        "spatk": 70,
+        "spdef": 55,
+        "speed": 70
+      },
+      "moveIds": [
+        "water_jet",
+        "tackle"
+      ],
+      "biome": "water",
+      "era": "wild"
     },
     {
       "id": "marsupp",
       "name": "Marsupp",
-      "types": ["Water"],
+      "types": [
+        "Water"
+      ],
       "flavor": "Clings to anchor chains and old mooring ropes; fishermen have to pry it loose before it eats through the line.",
-      "baseStats": { "hp": 75, "atk": 60, "def": 80, "spatk": 50, "spdef": 70, "speed": 40 },
-      "moveIds": ["water_jet", "tackle"],
-      "biome": "water"
+      "baseStats": {
+        "hp": 75,
+        "atk": 60,
+        "def": 80,
+        "spatk": 50,
+        "spdef": 70,
+        "speed": 40
+      },
+      "moveIds": [
+        "water_jet",
+        "tackle"
+      ],
+      "biome": "water",
+      "era": "wild"
     },
     {
       "id": "kalanka",
       "name": "Kalanka",
-      "types": ["Water", "Rock"],
+      "types": [
+        "Water",
+        "Rock"
+      ],
       "flavor": "Lives on the coral-crusted reef shelves off the coast, its shell indistinguishable from the rock until it moves.",
-      "baseStats": { "hp": 80, "atk": 70, "def": 85, "spatk": 60, "spdef": 75, "speed": 35 },
-      "moveIds": ["water_jet", "rock_throw", "tackle"],
-      "biome": "water"
+      "baseStats": {
+        "hp": 80,
+        "atk": 70,
+        "def": 85,
+        "spatk": 60,
+        "spdef": 75,
+        "speed": 35
+      },
+      "moveIds": [
+        "water_jet",
+        "rock_throw",
+        "tackle"
+      ],
+      "biome": "water",
+      "era": "wild"
     },
     {
       "id": "vurjenn",
       "name": "Vurjenn",
-      "types": ["Water", "Flying"],
+      "types": [
+        "Water",
+        "Flying"
+      ],
       "flavor": "Dives from the cliffs into open water after schools of fish, surfacing almost a hundred metres from where it entered.",
-      "baseStats": { "hp": 70, "atk": 75, "def": 55, "spatk": 65, "spdef": 55, "speed": 95 },
-      "moveIds": ["water_jet", "tackle"],
-      "biome": "water"
+      "baseStats": {
+        "hp": 70,
+        "atk": 75,
+        "def": 55,
+        "spatk": 65,
+        "spdef": 55,
+        "speed": 95
+      },
+      "moveIds": [
+        "water_jet",
+        "tackle"
+      ],
+      "biome": "water",
+      "era": "wild"
     },
     {
       "id": "ondallus",
       "name": "Ondallus",
-      "types": ["Water", "Dragon"],
+      "types": [
+        "Water",
+        "Dragon"
+      ],
       "flavor": "Old fishermen blame the strong currents off the outer rock on this creature turning over in its sleep far below.",
-      "baseStats": { "hp": 95, "atk": 90, "def": 75, "spatk": 95, "spdef": 80, "speed": 60 },
-      "moveIds": ["water_jet", "tackle"],
-      "biome": "water"
+      "baseStats": {
+        "hp": 95,
+        "atk": 90,
+        "def": 75,
+        "spatk": 95,
+        "spdef": 80,
+        "speed": 60
+      },
+      "moveIds": [
+        "water_jet",
+        "tackle"
+      ],
+      "biome": "water",
+      "era": "wild"
     },
     {
       "id": "ramliet",
       "name": "Ramliet",
-      "types": ["Ground"],
+      "types": [
+        "Ground"
+      ],
       "flavor": "Burrows sideways through the fine red sand of the dunes, leaving trails that vanish with the next gust.",
-      "baseStats": { "hp": 60, "atk": 70, "def": 65, "spatk": 35, "spdef": 50, "speed": 60 },
-      "moveIds": ["sand_blast", "tackle"],
-      "biome": "sand"
+      "baseStats": {
+        "hp": 60,
+        "atk": 70,
+        "def": 65,
+        "spatk": 35,
+        "spdef": 50,
+        "speed": 60
+      },
+      "moveIds": [
+        "sand_blast",
+        "tackle"
+      ],
+      "biome": "sand",
+      "era": "wild"
     },
     {
       "id": "xemxun",
       "name": "Xemxun",
-      "types": ["Ground", "Fire"],
+      "types": [
+        "Ground",
+        "Fire"
+      ],
       "flavor": "Basks on sunbaked dune ridges until its scales are almost too hot to touch, then races off before it burns.",
-      "baseStats": { "hp": 65, "atk": 75, "def": 60, "spatk": 60, "spdef": 50, "speed": 80 },
-      "moveIds": ["sand_blast", "ember", "tackle"],
-      "biome": "sand"
+      "baseStats": {
+        "hp": 65,
+        "atk": 75,
+        "def": 60,
+        "spatk": 60,
+        "spdef": 50,
+        "speed": 80
+      },
+      "moveIds": [
+        "sand_blast",
+        "ember",
+        "tackle"
+      ],
+      "biome": "sand",
+      "era": "wild"
     },
     {
       "id": "dunkorr",
       "name": "Dunkorr",
-      "types": ["Ground", "Rock"],
+      "types": [
+        "Ground",
+        "Rock"
+      ],
       "flavor": "Formed where wind-blown sand fuses with soft rock over centuries; its footprints outlast most buildings.",
-      "baseStats": { "hp": 90, "atk": 85, "def": 100, "spatk": 30, "spdef": 60, "speed": 25 },
-      "moveIds": ["sand_blast", "rock_throw", "tackle"],
-      "biome": "sand"
+      "baseStats": {
+        "hp": 90,
+        "atk": 85,
+        "def": 100,
+        "spatk": 30,
+        "spdef": 60,
+        "speed": 25
+      },
+      "moveIds": [
+        "sand_blast",
+        "rock_throw",
+        "tackle"
+      ],
+      "biome": "sand",
+      "era": "wild"
     },
     {
       "id": "sirokk",
       "name": "Sirokk",
-      "types": ["Ground", "Flying"],
+      "types": [
+        "Ground",
+        "Flying"
+      ],
       "flavor": "A miniature sandstorm with eyes, kicked up whenever the real sirocco wind blows in off the sea.",
-      "baseStats": { "hp": 70, "atk": 80, "def": 55, "spatk": 65, "spdef": 55, "speed": 90 },
-      "moveIds": ["sand_blast", "tackle"],
-      "biome": "sand"
+      "baseStats": {
+        "hp": 70,
+        "atk": 80,
+        "def": 55,
+        "spatk": 65,
+        "spdef": 55,
+        "speed": 90
+      },
+      "moveIds": [
+        "sand_blast",
+        "tackle"
+      ],
+      "biome": "sand",
+      "era": "wild"
     },
     {
       "id": "ossijan",
       "name": "Ossijan",
-      "types": ["Ground"],
+      "types": [
+        "Ground"
+      ],
       "flavor": "Collects sun-bleached bones in its dune burrow; locals say the biggest hoards belong to the oldest ones.",
-      "baseStats": { "hp": 85, "atk": 95, "def": 75, "spatk": 45, "spdef": 65, "speed": 55 },
-      "moveIds": ["sand_blast", "tackle"],
-      "biome": "sand"
+      "baseStats": {
+        "hp": 85,
+        "atk": 95,
+        "def": 75,
+        "spatk": 45,
+        "spdef": 65,
+        "speed": 55
+      },
+      "moveIds": [
+        "sand_blast",
+        "tackle"
+      ],
+      "biome": "sand",
+      "era": "wild"
+    },
+    {
+      "id": "dormina",
+      "name": "Dormina",
+      "types": [
+        "Psychic",
+        "Fairy"
+      ],
+      "flavor": "Curled on its side in perpetual sleep, exactly as the clay figure found in the Hypogeum's deepest chamber. Whatever it is dreaming, those who nap beside it wake remembering the same corridor.",
+      "baseStats": {
+        "hp": 78,
+        "atk": 45,
+        "def": 62,
+        "spatk": 92,
+        "spdef": 88,
+        "speed": 40
+      },
+      "moveIds": [
+        "psy_pulse",
+        "glimmer",
+        "night_veil"
+      ],
+      "biome": "rock",
+      "era": "neolithic"
+    },
+    {
+      "id": "ggantroll",
+      "name": "Ggantroll",
+      "types": [
+        "Rock",
+        "Fighting"
+      ],
+      "flavor": "Legend credits the temples to a single giantess who carried the uprights on her shoulders. Something still hauls stones about the fields at night, and the ruts it leaves run down to the sea.",
+      "baseStats": {
+        "hp": 95,
+        "atk": 112,
+        "def": 105,
+        "spatk": 50,
+        "spdef": 72,
+        "speed": 38
+      },
+      "moveIds": [
+        "trilithon_slam",
+        "palm_strike",
+        "rock_throw"
+      ],
+      "biome": "rock",
+      "era": "neolithic"
+    },
+    {
+      "id": "bornadur",
+      "name": "Borżnadur",
+      "types": [
+        "Rock",
+        "Dark"
+      ],
+      "flavor": "A silo-dweller from the cliff-top villages that replaced the temple folk. It hoards grain, bronze scraps and grudges in equal measure, and it remembers who took what.",
+      "baseStats": {
+        "hp": 80,
+        "atk": 88,
+        "def": 92,
+        "spatk": 52,
+        "spdef": 70,
+        "speed": 56
+      },
+      "moveIds": [
+        "rock_throw",
+        "night_veil",
+        "tackle"
+      ],
+      "biome": "rock",
+      "era": "bronze"
+    },
+    {
+      "id": "kartrutt",
+      "name": "Kartrutt",
+      "types": [
+        "Rock",
+        "Ground"
+      ],
+      "flavor": "Drags its shell through soft limestone and leaves a pair of parallel grooves behind it. Nobody has satisfactorily explained the cart ruts at Clapham Junction either.",
+      "baseStats": {
+        "hp": 86,
+        "atk": 76,
+        "def": 104,
+        "spatk": 44,
+        "spdef": 66,
+        "speed": 42
+      },
+      "moveIds": [
+        "sand_blast",
+        "rock_throw",
+        "tackle"
+      ],
+      "biome": "rock",
+      "era": "bronze"
+    },
+    {
+      "id": "murexil",
+      "name": "Murexil",
+      "types": [
+        "Water",
+        "Poison"
+      ],
+      "flavor": "Prised off the reef by the thousand and boiled in vats along the shore. Each one yields a few drops of the purple that dyed Tyre's cloth — and stains the hands of anyone who handles it.",
+      "baseStats": {
+        "hp": 58,
+        "atk": 52,
+        "def": 72,
+        "spatk": 66,
+        "spdef": 64,
+        "speed": 38
+      },
+      "moveIds": [
+        "venom_spit",
+        "water_jet",
+        "tackle"
+      ],
+      "biome": "water",
+      "era": "phoenician",
+      "evolvesAtLevel": 28,
+      "evolvesInto": "tirjanu"
+    },
+    {
+      "id": "tirjanu",
+      "name": "Tirjanu",
+      "types": [
+        "Water",
+        "Poison"
+      ],
+      "flavor": "The dye-master of the shoals. Its shell darkens through violet to near-black with age, and the water it sits in stays coloured for days after it moves on.",
+      "baseStats": {
+        "hp": 86,
+        "atk": 74,
+        "def": 98,
+        "spatk": 96,
+        "spdef": 88,
+        "speed": 46
+      },
+      "moveIds": [
+        "tyrian_dye",
+        "venom_spit",
+        "harbour_swell"
+      ],
+      "biome": "water",
+      "era": "phoenician"
+    },
+    {
+      "id": "lembuqa",
+      "name": "Lembuqa",
+      "types": [
+        "Water",
+        "Steel"
+      ],
+      "flavor": "Shaped like the round-bellied traders that ran tin and oil between Carthage and the harbours here. It still rides low in the water, as though carrying cargo nobody has unloaded.",
+      "baseStats": {
+        "hp": 92,
+        "atk": 78,
+        "def": 102,
+        "spatk": 58,
+        "spdef": 74,
+        "speed": 44
+      },
+      "moveIds": [
+        "harbour_swell",
+        "metal_claw",
+        "water_jet"
+      ],
+      "biome": "water",
+      "era": "phoenician"
+    },
+    {
+      "id": "ghajnuq",
+      "name": "Għajnuq",
+      "types": [
+        "Psychic",
+        "Water"
+      ],
+      "flavor": "The painted eye on a boat's prow, grown a body. Fishermen still paint it on the luzzu to watch the water ahead, and insist the ones that drift ashore are watching something else.",
+      "baseStats": {
+        "hp": 70,
+        "atk": 48,
+        "def": 68,
+        "spatk": 94,
+        "spdef": 82,
+        "speed": 66
+      },
+      "moveIds": [
+        "psy_pulse",
+        "water_jet",
+        "glimmer"
+      ],
+      "biome": "water",
+      "era": "phoenician"
+    },
+    {
+      "id": "tessera",
+      "name": "Tessera",
+      "types": [
+        "Rock",
+        "Psychic"
+      ],
+      "flavor": "A single floor-tile that got loose from a townhouse in Melite and never went back. It rearranges its own chips when it thinks nobody is counting them.",
+      "baseStats": {
+        "hp": 54,
+        "atk": 50,
+        "def": 74,
+        "spatk": 78,
+        "spdef": 66,
+        "speed": 44
+      },
+      "moveIds": [
+        "mosaic_shard",
+        "psy_pulse",
+        "tackle"
+      ],
+      "biome": "rock",
+      "era": "roman",
+      "evolvesAtLevel": 30,
+      "evolvesInto": "mosaikos"
+    },
+    {
+      "id": "mosaikos",
+      "name": "Mosaikos",
+      "types": [
+        "Rock",
+        "Psychic"
+      ],
+      "flavor": "An entire mosaic floor risen upright. The pattern across its chest is a recognisable Roman guilloche, and it re-lays itself into a new design after every fight it wins.",
+      "baseStats": {
+        "hp": 92,
+        "atk": 80,
+        "def": 116,
+        "spatk": 104,
+        "spdef": 92,
+        "speed": 48
+      },
+      "moveIds": [
+        "mosaic_shard",
+        "psy_pulse",
+        "rock_throw"
+      ],
+      "biome": "rock",
+      "era": "roman"
+    },
+    {
+      "id": "amforu",
+      "name": "Amforu",
+      "types": [
+        "Ground",
+        "Water"
+      ],
+      "flavor": "Amphorae went down with every wreck in these straits, and a few walked back out. This one is still three-quarters full of something that was olive oil two thousand years ago.",
+      "baseStats": {
+        "hp": 84,
+        "atk": 66,
+        "def": 88,
+        "spatk": 62,
+        "spdef": 72,
+        "speed": 46
+      },
+      "moveIds": [
+        "sand_blast",
+        "water_jet",
+        "tackle"
+      ],
+      "biome": "sand",
+      "era": "roman"
+    },
+    {
+      "id": "laurentu",
+      "name": "Laurentu",
+      "types": [
+        "Grass",
+        "Fighting"
+      ],
+      "flavor": "Grown in the olive terraces the legions planted and never left. It wears its wreath like a rank badge and takes challenges from anything shorter than itself.",
+      "baseStats": {
+        "hp": 88,
+        "atk": 102,
+        "def": 78,
+        "spatk": 58,
+        "spdef": 74,
+        "speed": 72
+      },
+      "moveIds": [
+        "legion_charge",
+        "vine_lash",
+        "palm_strike"
+      ],
+      "biome": "grass",
+      "era": "roman"
+    },
+    {
+      "id": "vipaulus",
+      "name": "Vipaulus",
+      "types": [
+        "Poison",
+        "Fighting"
+      ],
+      "flavor": "The shipwrecked apostle shook the viper into the fire and took no harm, and the islanders changed their minds about him twice in a minute. Its descendants are still unbothered by flame.",
+      "baseStats": {
+        "hp": 76,
+        "atk": 104,
+        "def": 70,
+        "spatk": 66,
+        "spdef": 68,
+        "speed": 86
+      },
+      "moveIds": [
+        "venom_spit",
+        "palm_strike",
+        "ember"
+      ],
+      "biome": "grass",
+      "era": "roman"
+    },
+    {
+      "id": "ghasel",
+      "name": "Għasel",
+      "types": [
+        "Bug",
+        "Ground"
+      ],
+      "flavor": "The island's own honeybee, small and dark and bad-tempered. Melita was named for what it makes, and it behaves as though it knows that.",
+      "baseStats": {
+        "hp": 52,
+        "atk": 58,
+        "def": 54,
+        "spatk": 66,
+        "spdef": 60,
+        "speed": 74
+      },
+      "moveIds": [
+        "honey_snare",
+        "bug_bite",
+        "sand_blast"
+      ],
+      "biome": "grass",
+      "era": "arab",
+      "evolvesAtLevel": 26,
+      "evolvesInto": "nahlija"
+    },
+    {
+      "id": "nahlija",
+      "name": "Naħlija",
+      "types": [
+        "Bug",
+        "Fairy"
+      ],
+      "flavor": "A hive's worth of temperament in one body. The comb on its back is built to a pattern that predates every wall on the island, and the honey in it is worth more than the wall.",
+      "baseStats": {
+        "hp": 80,
+        "atk": 86,
+        "def": 76,
+        "spatk": 102,
+        "spdef": 92,
+        "speed": 84
+      },
+      "moveIds": [
+        "honey_snare",
+        "glimmer",
+        "bug_bite"
+      ],
+      "biome": "grass",
+      "era": "arab"
+    },
+    {
+      "id": "larinja",
+      "name": "Larinġa",
+      "types": [
+        "Grass",
+        "Fairy"
+      ],
+      "flavor": "Citrus, sugar cane and cotton all arrived in the same few decades, and something in the new groves arrived with them. It smells of blossom and will not be moved out of the shade.",
+      "baseStats": {
+        "hp": 78,
+        "atk": 62,
+        "def": 72,
+        "spatk": 94,
+        "spdef": 88,
+        "speed": 56
+      },
+      "moveIds": [
+        "vine_lash",
+        "glimmer",
+        "tackle"
+      ],
+      "biome": "grass",
+      "era": "arab"
+    },
+    {
+      "id": "sienja",
+      "name": "Sienja",
+      "types": [
+        "Water",
+        "Steel"
+      ],
+      "flavor": "The chain-and-bucket wheel that turned over every well on the island, still turning. Drop a coin in and it will raise water long after the field it served has gone.",
+      "baseStats": {
+        "hp": 94,
+        "atk": 84,
+        "def": 106,
+        "spatk": 62,
+        "spdef": 78,
+        "speed": 40
+      },
+      "moveIds": [
+        "noria_jet",
+        "metal_claw",
+        "water_jet"
+      ],
+      "biome": "water",
+      "era": "arab"
+    },
+    {
+      "id": "skudier",
+      "name": "Skudier",
+      "types": [
+        "Steel"
+      ],
+      "flavor": "A squire's kit that learned to stand up on its own. Over-polished, over-eager, and it salutes anything wearing more metal than it is.",
+      "baseStats": {
+        "hp": 60,
+        "atk": 64,
+        "def": 78,
+        "spatk": 42,
+        "spdef": 58,
+        "speed": 52
+      },
+      "moveIds": [
+        "metal_claw",
+        "cross_guard",
+        "tackle"
+      ],
+      "biome": "rock",
+      "era": "knights",
+      "evolvesAtLevel": 27,
+      "evolvesInto": "kavallier"
+    },
+    {
+      "id": "kavallier",
+      "name": "Kavallier",
+      "types": [
+        "Steel",
+        "Fighting"
+      ],
+      "flavor": "Full harness, eight-pointed cross, and the unshakeable conviction that the wall behind it must not fall. Fights in formation even when there is nobody beside it.",
+      "baseStats": {
+        "hp": 88,
+        "atk": 98,
+        "def": 112,
+        "spatk": 50,
+        "spdef": 76,
+        "speed": 62
+      },
+      "moveIds": [
+        "cross_guard",
+        "palm_strike",
+        "metal_claw"
+      ],
+      "biome": "rock",
+      "era": "knights",
+      "evolvesAtLevel": 42,
+      "evolvesInto": "granmastru"
+    },
+    {
+      "id": "granmastru",
+      "name": "Granmastru",
+      "types": [
+        "Steel",
+        "Psychic"
+      ],
+      "flavor": "It commands the way the Order's grand masters did — from the middle of the line, in a voice that carries over cannon. The auberges were built to a plan it still seems to be following.",
+      "baseStats": {
+        "hp": 104,
+        "atk": 112,
+        "def": 126,
+        "spatk": 92,
+        "spdef": 98,
+        "speed": 58
+      },
+      "moveIds": [
+        "cross_guard",
+        "psy_pulse",
+        "metal_claw"
+      ],
+      "biome": "rock",
+      "era": "knights"
+    },
+    {
+      "id": "falkun",
+      "name": "Falkun",
+      "types": [
+        "Flying",
+        "Steel"
+      ],
+      "flavor": "The Order held these islands for the rent of one live falcon a year, delivered to the Emperor on All Saints' Day. This is the sort of bird that rent was paid in, and it knows its own price.",
+      "baseStats": {
+        "hp": 86,
+        "atk": 118,
+        "def": 84,
+        "spatk": 72,
+        "spdef": 80,
+        "speed": 118
+      },
+      "moveIds": [
+        "gale_dive",
+        "cross_guard",
+        "metal_claw"
+      ],
+      "biome": "rock",
+      "era": "knights"
+    },
+    {
+      "id": "jannisar",
+      "name": "Jannisar",
+      "types": [
+        "Fire",
+        "Fighting"
+      ],
+      "flavor": "Disciplined, drilled, and marching to a band nobody else can hear. It came ashore in the summer of 1565 and has not been told that the siege ended.",
+      "baseStats": {
+        "hp": 88,
+        "atk": 106,
+        "def": 82,
+        "spatk": 68,
+        "spdef": 72,
+        "speed": 84
+      },
+      "moveIds": [
+        "siege_volley",
+        "palm_strike",
+        "ember"
+      ],
+      "biome": "sand",
+      "era": "ottoman"
+    },
+    {
+      "id": "bombarda",
+      "name": "Bombarda",
+      "types": [
+        "Fire",
+        "Steel"
+      ],
+      "flavor": "A siege gun that outlived its carriage. It fires stone shot at the nearest fortification out of pure habit, and the bastions it aims at were built thick enough to take it.",
+      "baseStats": {
+        "hp": 102,
+        "atk": 116,
+        "def": 110,
+        "spatk": 84,
+        "spdef": 66,
+        "speed": 30
+      },
+      "moveIds": [
+        "siege_volley",
+        "metal_claw",
+        "rock_throw"
+      ],
+      "biome": "rock",
+      "era": "ottoman"
+    },
+    {
+      "id": "hilalux",
+      "name": "Hilalux",
+      "types": [
+        "Dark",
+        "Flying"
+      ],
+      "flavor": "A standard that stayed in the air after the pole went down. It circles the harbour at dusk, casting a crescent of shadow that is never quite where the sun says it should be.",
+      "baseStats": {
+        "hp": 80,
+        "atk": 94,
+        "def": 74,
+        "spatk": 96,
+        "spdef": 78,
+        "speed": 102
+      },
+      "moveIds": [
+        "scimitar_arc",
+        "gale_dive",
+        "night_veil"
+      ],
+      "biome": "sand",
+      "era": "ottoman"
+    },
+    {
+      "id": "pustaljon",
+      "name": "Pustaljon",
+      "types": [
+        "Steel",
+        "Electric"
+      ],
+      "flavor": "Cast in Birmingham, planted on a street corner, and painted over so many times the royal cypher underneath is a rumour. It still takes letters and it still will not give them back.",
+      "baseStats": {
+        "hp": 86,
+        "atk": 70,
+        "def": 104,
+        "spatk": 74,
+        "spdef": 80,
+        "speed": 48
+      },
+      "moveIds": [
+        "metal_claw",
+        "spark",
+        "tackle"
+      ],
+      "biome": "grass",
+      "era": "british"
+    },
+    {
+      "id": "konvoj",
+      "name": "Konvoj",
+      "types": [
+        "Water",
+        "Steel"
+      ],
+      "flavor": "Low in the water and grimly determined, the way the relief convoys came in under bombing. What it is carrying matters more to it than what happens to it.",
+      "baseStats": {
+        "hp": 112,
+        "atk": 82,
+        "def": 112,
+        "spatk": 70,
+        "spdef": 86,
+        "speed": 44
+      },
+      "moveIds": [
+        "harbour_swell",
+        "metal_claw",
+        "noria_jet"
+      ],
+      "biome": "water",
+      "era": "british"
     }
   ]
 }
