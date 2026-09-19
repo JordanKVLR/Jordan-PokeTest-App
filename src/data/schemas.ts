@@ -92,14 +92,30 @@ export const TypeChartFileSchema = z.object({
   matrix: z.record(z.string(), z.record(z.string(), z.number())),
 });
 
+/** A stat stage nudge, applied to whoever used the move or to the creature on the far side. */
+export const StatChangeSchema = z.object({
+  target: z.enum(["self", "opponent"]),
+  stat: z.enum(["atk", "def", "spatk", "spdef", "speed", "accuracy", "evasion"]),
+  /** Stages to shift, clamped to -6..+6 in the engine. Negative lowers. */
+  stages: z.number().int(),
+  /** Percentage chance of applying. 100 for a status move's whole point; lower for the
+   * secondary effect riding along on a damaging move. */
+  chance: z.number().int().min(1).max(100).default(100),
+});
+
 export const MoveDataSchema = z.object({
   id: z.string(),
   name: z.string(),
   type: TypeNameSchema,
-  category: z.enum(["physical", "special"]),
-  power: z.number().int().positive(),
+  /** "status" moves deal no damage and exist purely for their statChanges. */
+  category: z.enum(["physical", "special", "status"]),
+  /** 0 for status moves. */
+  power: z.number().int().nonnegative(),
   accuracy: z.number().int().min(1).max(100),
+  /** How many times it can be used before the party needs to rest. Heavy hitters get few. */
+  pp: z.number().int().positive(),
   basePriority: z.number().int(),
+  statChanges: z.array(StatChangeSchema).optional(),
 });
 
 export const MovesFileSchema = z.object({
@@ -158,6 +174,16 @@ export const WildCreatureSchema = z.object({
   evolvesAtLevel: z.number().int().positive().nullable().optional(),
   /** Species id this evolves into; required whenever evolvesAtLevel is set. */
   evolvesInto: z.string().nullable().optional(),
+});
+
+export const LearnsetEntrySchema = z.object({
+  level: z.number().int().positive(),
+  moveId: z.string(),
+});
+
+/** speciesId -> the moves it gains as it levels. */
+export const LearnsetsFileSchema = z.object({
+  learnsets: z.record(z.string(), z.array(LearnsetEntrySchema)),
 });
 
 export const WildCreaturesFileSchema = z.object({

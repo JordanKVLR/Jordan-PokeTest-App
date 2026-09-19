@@ -5,12 +5,16 @@ import { buildStarterParticipant, STARTER_STARTING_LEVEL, type StarterLineName }
 import {
   partyMemberFromParticipant,
   partyMemberStats,
+  fullPpFor,
+  remainingPp,
   addExperience,
   applyLevelUp,
   type PartyMember,
   type EvolutionReveal,
+  type MoveLearnResult,
 } from "../game/party";
 import { defaultStartingInventory, getItem } from "../game/itemsRepo";
+import { getMove } from "../game/movesRepo";
 
 const SAVE_KEY = "melita-save";
 const SAVE_VERSION = 1;
@@ -25,12 +29,19 @@ export interface ExperienceGainResult {
   newLevel: number;
   levelsGained: number;
   evolution: EvolutionReveal | null;
+  moveLearning: MoveLearnResult;
 }
 
 export type UseItemResult =
   | { applied: false }
   | { applied: true; effect: "heal"; healedAmount: number }
-  | { applied: true; effect: "level_up"; member: PartyMember; evolution: EvolutionReveal | null };
+  | {
+      applied: true;
+      effect: "level_up";
+      member: PartyMember;
+      evolution: EvolutionReveal | null;
+      moveLearning: MoveLearnResult;
+    };
 
 interface GameState {
   playerName: string;
@@ -72,7 +83,14 @@ interface GameState {
   /** Healing Center: fully revives every KO'd (currentHp <= 0) party member to max HP.
    * Deliberately leaves already-conscious members untouched, even if not at full HP —
    * this is a blackout-recovery station, not a full-party top-up. Returns how many were healed. */
+  /** Healing Centre: restores HP and move PP across the whole party. Returns how many
+   * members actually needed it. */
   healFaintedPartyMembers: () => number;
+  /** Consumes one PP of a move for a party member. */
+  spendPp: (uid: string, moveId: string) => void;
+  /** Swaps a known move for a newly learned one, giving the new move full PP. Passing a
+   * forgotten move the member doesn't know is a no-op. */
+  replacePartyMemberMove: (uid: string, forgetMoveId: string, learnMoveId: string) => void;
   resetGame: () => void;
 }
 
@@ -193,12 +211,12 @@ export const useGameStore = create<GameState>()(
       }
 
       if (item.effect === "level_up") {
-        const { member: leveled, evolution } = applyLevelUp(member);
+        const { member: leveled, evolution, moveLearning } = applyLevelUp(member);
         set({
           party: party.map((m) => (m.uid === uid ? leveled : m)),
           inventory: { ...inventory, [itemId]: qty - 1 },
         });
-        return { applied: true, effect: "level_up", member: leveled, evolution };
+        return { applied: true, effect: "level_up", member: leveled, evolution, moveLearning };
       }
 
       return { applied: false };
@@ -229,15 +247,39 @@ export const useGameStore = create<GameState>()(
 
     healFaintedPartyMembers: () => {
       const { party } = get();
-      let healedCount = 0;
+      let restoredCount = 0;
       const healed = party.map((m) => {
-        if (m.currentHp > 0) return m;
-        healedCount += 1;
-        return { ...m, currentHp: partyMemberStats(m).hp };
+        const maxHp = partyMemberStats(m).hp;
+        const needsHp = m.currentHp < maxHp;
+        const needsPp = m.moveIds.some((id) => remainingPp(m, id) < getMove(id).pp);
+        if (!needsHp && !needsPp) return m;
+        restoredCount += 1;
+        return { ...m, currentHp: maxHp, movePp: fullPpFor(m.moveIds) };
       });
-      if (healedCount > 0) set({ party: healed });
-      return healedCount;
+      if (restoredCount > 0) set({ party: healed });
+      return restoredCount;
     },
+
+    replacePartyMemberMove: (uid, forgetMoveId, learnMoveId) =>
+      set((state) => ({
+        party: state.party.map((m) => {
+          if (m.uid !== uid || !m.moveIds.includes(forgetMoveId)) return m;
+          const moveIds = m.moveIds.map((id) => (id === forgetMoveId ? learnMoveId : id));
+          const movePp = { ...(m.movePp ?? {}) };
+          delete movePp[forgetMoveId];
+          movePp[learnMoveId] = getMove(learnMoveId).pp;
+          return { ...m, moveIds, movePp };
+        }),
+      })),
+
+    spendPp: (uid, moveId) =>
+      set((state) => ({
+        party: state.party.map((m) => {
+          if (m.uid !== uid) return m;
+          const current = remainingPp(m, moveId);
+          return { ...m, movePp: { ...(m.movePp ?? fullPpFor(m.moveIds)), [moveId]: Math.max(0, current - 1) } };
+        }),
+      })),
 
     resetGame: () =>
       set({

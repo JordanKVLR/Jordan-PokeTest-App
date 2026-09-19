@@ -8,6 +8,9 @@ const movesById: Record<string, Move> = Object.fromEntries(
   parsed.moves.map((move) => [move.id, move])
 );
 
+/** The free fallback when every learned move is out of PP — weak, but never rationed. */
+export const LAST_RESORT_MOVE_ID = "scrap";
+
 export function getMove(id: string): Move {
   const move = movesById[id];
   if (!move) throw new Error(`Unknown move id: ${id}`);

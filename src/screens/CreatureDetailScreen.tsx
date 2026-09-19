@@ -17,6 +17,7 @@ import { ScreenBackground } from "./components/ScreenBackground";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { LevelUpModal, type LevelUpRevealData } from "./components/LevelUpModal";
 import { EvolutionModal, type EvolutionRevealData } from "./components/EvolutionModal";
+import { MoveLearnModal, type MoveLearnPrompt } from "./components/MoveLearnModal";
 import { colors } from "./theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CreatureDetail">;
@@ -54,11 +55,13 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
   const inventory = useGameStore((s) => s.inventory);
   const useItemOnPartyMember = useGameStore((s) => s.useItemOnPartyMember);
   const renamePartyMember = useGameStore((s) => s.renamePartyMember);
+  const replacePartyMemberMove = useGameStore((s) => s.replacePartyMemberMove);
   const [confirmingRelease, setConfirmingRelease] = useState(false);
   const [showItems, setShowItems] = useState(false);
   const [itemFeedback, setItemFeedback] = useState<string | null>(null);
   const [levelUpReveal, setLevelUpReveal] = useState<LevelUpRevealData | null>(null);
   const [evolutionReveal, setEvolutionReveal] = useState<EvolutionRevealData | null>(null);
+  const [movePrompts, setMovePrompts] = useState<MoveLearnPrompt[]>([]);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
 
@@ -116,6 +119,19 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
       setItemFeedback(`${partyMember.displayName} used ${itemName} and recovered ${result.healedAmount} HP!`);
     } else {
       const leveled = result.member;
+      for (const moveId of result.moveLearning.learned) {
+        setItemFeedback(`${leveled.displayName} learned ${getMove(moveId).name}!`);
+      }
+      if (result.moveLearning.pending.length > 0) {
+        setMovePrompts(
+          result.moveLearning.pending.map((moveId) => ({
+            uid: leveled.uid,
+            displayName: leveled.displayName,
+            newMoveId: moveId,
+            currentMoveIds: leveled.moveIds,
+          }))
+        );
+      }
       if (result.evolution) {
         setItemFeedback(`${result.evolution.oldDisplayName} evolved into ${result.evolution.newDisplayName}!`);
         setEvolutionReveal(result.evolution);
@@ -306,8 +322,22 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
 
       {evolutionReveal ? (
         <EvolutionModal data={evolutionReveal} onDismiss={() => setEvolutionReveal(null)} />
+      ) : levelUpReveal ? (
+        <LevelUpModal data={levelUpReveal} onDismiss={() => setLevelUpReveal(null)} />
       ) : (
-        levelUpReveal && <LevelUpModal data={levelUpReveal} onDismiss={() => setLevelUpReveal(null)} />
+        movePrompts.length > 0 && (
+          <MoveLearnModal
+            prompt={movePrompts[0]}
+            onReplace={(forgetMoveId) => {
+              replacePartyMemberMove(movePrompts[0].uid, forgetMoveId, movePrompts[0].newMoveId);
+              setItemFeedback(
+                `${movePrompts[0].displayName} forgot ${getMove(forgetMoveId).name} and learned ${getMove(movePrompts[0].newMoveId).name}!`
+              );
+              setMovePrompts((prev) => prev.slice(1));
+            }}
+            onSkip={() => setMovePrompts((prev) => prev.slice(1))}
+          />
+        )
       )}
 
       <PrimaryButton testID="back-button" label="Back" variant="secondary" onPress={() => navigation.goBack()} />

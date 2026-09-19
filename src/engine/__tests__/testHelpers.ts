@@ -26,6 +26,7 @@ export function makeMove(overrides: Partial<Move> = {}): Move {
     category: "physical",
     power: 80,
     accuracy: 100,
+    pp: 20,
     basePriority: 0,
     ...overrides,
   };

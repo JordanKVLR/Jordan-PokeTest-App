@@ -49,15 +49,27 @@ export interface StatusEffect {
   onExpire?: (target: Creature) => void;
 }
 
+export interface StatChange {
+  target: "self" | "opponent";
+  stat: keyof StatStages;
+  stages: number;
+  /** Percentage chance of landing; 100 for a status move's primary effect. */
+  chance: number;
+}
+
 export interface Move {
   id: string;
   name: string;
   type: TypeName;
-  category: "physical" | "special";
+  /** "status" deals no damage — it exists for its statChanges. */
+  category: "physical" | "special" | "status";
   power: number;
   accuracy: number;
+  /** Maximum uses. Current remaining PP lives on the party member, not the move. */
+  pp: number;
   basePriority: number;
   statusEffect?: StatusCondition;
+  statChanges?: StatChange[];
 }
 
 export interface Creature {

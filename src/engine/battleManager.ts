@@ -1,9 +1,9 @@
-import type { BattleAction, BattleContext, Creature, Move } from "./types";
+import type { BattleAction, BattleContext, Creature, Move, StatStages } from "./types";
 import { calculateDamage, BASE_CRIT_CHANCE } from "./damage";
 import { sortByPriority, effectivePriority, type OrderedAction } from "./priority";
 import { activateCruxAura, getCruxStatMultiplier, isImmuneToFlinchViaCrux } from "./cruxAura";
 import { tickStatusEffects } from "./statusEffects";
-import { stageMultiplier } from "./statStages";
+import { clampStage, stageMultiplier } from "./statStages";
 
 export type BattleState =
   | "IDLE"
@@ -72,6 +72,16 @@ export function rollHit(actor: Creature, target: Creature, move: Move, randomSou
   return randomSource() < hitChance;
 }
 
+/** One stat stage shift that actually landed, for the battle log to narrate. */
+export interface AppliedStatChange {
+  /** Whose stat moved — the creature that used the move, or the one on the far side. */
+  target: "self" | "opponent";
+  stat: keyof StatStages;
+  /** Stages actually applied. 0 when the stat was already pinned at -6/+6. */
+  stages: number;
+  statName: string;
+}
+
 /** Per-action result, surfaced to callers (e.g. submitActions' onActionResolved) so the UI
  * can report exactly what happened — hit/miss, damage dealt, crit — without re-deriving it
  * from before/after HP snapshots. */
@@ -83,6 +93,48 @@ export interface ActionOutcome {
   hit: boolean;
   damage: number;
   crit: boolean;
+  /** Stat shifts this action caused, in the order they applied. */
+  statChanges?: AppliedStatChange[];
+}
+
+const STAT_DISPLAY_NAMES: Record<keyof StatStages, string> = {
+  atk: "Attack",
+  def: "Defense",
+  spatk: "Sp. Attack",
+  spdef: "Sp. Defense",
+  speed: "Speed",
+  accuracy: "accuracy",
+  evasion: "evasion",
+};
+
+/**
+ * Applies a move's stat changes, rolling each one's chance separately. A change against a
+ * fainted target is skipped (nothing left to debuff), and a stat already pinned at the -6/+6
+ * ends of the stage table reports 0 stages moved so the log can say "it won't go lower".
+ */
+function applyStatChanges(
+  move: Move,
+  actor: Creature,
+  target: Creature,
+  randomSource: () => number
+): AppliedStatChange[] {
+  if (!move.statChanges?.length) return [];
+  const applied: AppliedStatChange[] = [];
+  for (const change of move.statChanges) {
+    if (change.chance < 100 && randomSource() * 100 >= change.chance) continue;
+    const recipient = change.target === "self" ? actor : target;
+    if (recipient.currentHp <= 0) continue;
+    const before = recipient.statStages[change.stat];
+    const after = clampStage(before + change.stages);
+    recipient.statStages[change.stat] = after;
+    applied.push({
+      target: change.target,
+      stat: change.stat,
+      stages: after - before,
+      statName: STAT_DISPLAY_NAMES[change.stat],
+    });
+  }
+  return applied;
 }
 
 function nonMoveOutcome(action: BattleAction, actor: Creature, hit: boolean): ActionOutcome {
@@ -119,6 +171,12 @@ export function resolveAction(
       return { action, actor, target, hit: false, damage: 0, crit: false };
     }
 
+    // A status move never rolls damage — its whole effect is the stat shift.
+    if (move.category === "status") {
+      const statChanges = applyStatChanges(move, actor, target, randomSource);
+      return { action, actor, target, hit: true, damage: 0, crit: false, statChanges };
+    }
+
     const cruxAuraMultiplier = getCruxStatMultiplier(actor, move.category === "special" ? "spatk" : "atk");
     const isCrit = randomSource() < BASE_CRIT_CHANCE;
     const dmg = calculateDamage(actor, target, move, {
@@ -130,7 +188,10 @@ export function resolveAction(
     if (move.statusEffect && move.statusEffect !== "none" && target.status === "none") {
       target.status = move.statusEffect;
     }
-    return { action, actor, target, hit: true, damage: dmg, crit: isCrit };
+    // Secondary effects (a heavy hitter's self-debuff, a chance to drop the target's guard)
+    // resolve after damage, and only if the target is still standing for target-side ones.
+    const statChanges = applyStatChanges(move, actor, target, randomSource);
+    return { action, actor, target, hit: true, damage: dmg, crit: isCrit, statChanges };
   }
 
   // switch / item / flee: same pattern (mutate ctx accordingly) — omitted, no battle-engine

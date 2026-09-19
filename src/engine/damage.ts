@@ -46,6 +46,9 @@ export function calculateDamage(
   const typeEffectiveness = getTypeMultiplier(move.type, defender.types);
   if (typeEffectiveness === 0) return 0;
 
+  // A status move has no damage path at all; callers short-circuit before here, but guard
+  // anyway so a mis-routed status move scores 0 rather than a physical hit off power 0.
+  if (move.category === "status") return 0;
   const atkStat = attackStat(attacker, move.category);
   const defStat = defenseStat(defender, move.category);
 

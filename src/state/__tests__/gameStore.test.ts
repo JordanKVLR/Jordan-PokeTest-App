@@ -1,5 +1,6 @@
 import { useGameStore } from "../gameStore";
 import type { PartyMember } from "../../game/party";
+import { getMove } from "../../game/movesRepo";
 
 // Level 50 is progression.ts's REFERENCE_LEVEL, so effectiveStats(base, 50) == base + the
 // flat HP floor (base.hp=100 -> maxHp=110) — a stable, easy-to-hand-verify number for tests.
@@ -150,23 +151,43 @@ describe("gameStore", () => {
   });
 
   describe("healFaintedPartyMembers", () => {
-    it("fully revives every KO'd member to max HP and leaves conscious ones untouched", () => {
+    // Now that moves have finite PP, the Healing Centre is a full rest stop rather than a
+    // revive-only station: it tops up HP and PP for everyone who needs either.
+    it("restores HP for every member below full, not just the fainted ones", () => {
       const fainted = { ...makeMember("a"), currentHp: 0 };
-      const alive = { ...makeMember("b"), currentHp: 20 }; // not full (max is 110), should stay at 20
-      useGameStore.setState({ party: [fainted, alive] });
+      const hurt = { ...makeMember("b"), currentHp: 20 }; // max is 110
 
-      const healedCount = useGameStore.getState().healFaintedPartyMembers();
+      useGameStore.setState({ party: [fainted, hurt] });
+      const restoredCount = useGameStore.getState().healFaintedPartyMembers();
 
-      expect(healedCount).toBe(1);
+      expect(restoredCount).toBe(2);
       expect(useGameStore.getState().party[0].currentHp).toBe(110);
-      expect(useGameStore.getState().party[1].currentHp).toBe(20);
+      expect(useGameStore.getState().party[1].currentHp).toBe(110);
     });
 
-    it("returns 0 and leaves the party untouched when nobody is fainted", () => {
-      useGameStore.setState({ party: [makeMember("a"), makeMember("b")] });
-      const healedCount = useGameStore.getState().healFaintedPartyMembers();
-      expect(healedCount).toBe(0);
-      expect(useGameStore.getState().party.every((m) => m.currentHp === 20)).toBe(true);
+    it("restores spent move PP", () => {
+      const drained = { ...makeMember("a"), currentHp: 110, movePp: { tackle: 0 } };
+      useGameStore.setState({ party: [drained] });
+
+      expect(useGameStore.getState().healFaintedPartyMembers()).toBe(1);
+      expect(useGameStore.getState().party[0].movePp?.tackle).toBe(getMove("tackle").pp);
+    });
+
+    it("returns 0 and leaves the party untouched when nobody needs anything", () => {
+      const rested = { ...makeMember("a"), currentHp: 110, movePp: { tackle: getMove("tackle").pp } };
+      useGameStore.setState({ party: [rested] });
+      expect(useGameStore.getState().healFaintedPartyMembers()).toBe(0);
+      expect(useGameStore.getState().party[0].currentHp).toBe(110);
+    });
+  });
+
+  describe("spendPp", () => {
+    it("decrements a move's remaining PP and floors at zero", () => {
+      useGameStore.setState({ party: [{ ...makeMember("a"), movePp: { tackle: 1 } }] });
+      useGameStore.getState().spendPp("a", "tackle");
+      expect(useGameStore.getState().party[0].movePp?.tackle).toBe(0);
+      useGameStore.getState().spendPp("a", "tackle");
+      expect(useGameStore.getState().party[0].movePp?.tackle).toBe(0);
     });
   });
 });

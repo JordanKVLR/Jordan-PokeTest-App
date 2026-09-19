@@ -4,6 +4,8 @@ import type { StatBlock, TypeName } from "../data/schemas";
 import type { BattleParticipant } from "./creatureFactory";
 import { checkEvolution, defaultDisplayNameForSpecies } from "./creatureFactory";
 import { effectiveStats, xpToNextLevel } from "./progression";
+import { getMove } from "./movesRepo";
+import { movesLearnedBetween } from "./learnsetsRepo";
 
 export type PartySourceCategory = "starter" | "regional" | "wild";
 
@@ -18,6 +20,9 @@ export interface PartyMember {
   baseStats: StatBlock;
   currentHp: number;
   moveIds: string[];
+  /** Remaining uses per move id. Moves missing a key are treated as full (covers saves from
+   * before PP existed, and any move added to a creature after it was caught). */
+  movePp?: Record<string, number>;
   sourceCategory: PartySourceCategory;
 }
 
@@ -124,8 +129,24 @@ export function partyMemberFromParticipant(
     baseStats: { ...resolved.baseStats },
     currentHp,
     moveIds: participant.moveIds,
+    movePp: fullPpFor(participant.moveIds),
     sourceCategory,
   };
+}
+
+/** Full PP for every move a member knows — the state it leaves a Healing Centre in. */
+export function fullPpFor(moveIds: string[]): Record<string, number> {
+  return Object.fromEntries(moveIds.map((id) => [id, getMove(id).pp]));
+}
+
+/** Remaining PP for one move, defaulting to full when the save predates PP tracking. */
+export function remainingPp(member: PartyMember, moveId: string): number {
+  return member.movePp?.[moveId] ?? getMove(moveId).pp;
+}
+
+/** True when every move this member knows is spent, so only Scrap is left. */
+export function isOutOfPp(member: PartyMember): boolean {
+  return member.moveIds.every((id) => remainingPp(member, id) <= 0);
 }
 
 /** Level-scaled effective stats for a party member (see progression.ts). */
@@ -150,6 +171,47 @@ export function creatureFromPartyMember(member: PartyMember): Creature {
   };
 }
 
+export const MAX_MOVES = 4;
+
+/** What a level-up did to a creature's moveset. */
+export interface MoveLearnResult {
+  /** Moves added straight into a free slot. */
+  learned: string[];
+  /** Moves that had nowhere to go because all four slots are full — the UI offers a swap. */
+  pending: string[];
+}
+
+/**
+ * Adds every move unlocked between two levels, filling free slots first. Anything that
+ * doesn't fit is handed back as `pending` rather than silently dropped or auto-overwriting
+ * a move the player chose to keep.
+ */
+function learnMovesForLevelUp(
+  speciesId: string,
+  moveIds: string[],
+  movePp: Record<string, number> | undefined,
+  fromLevel: number,
+  toLevel: number
+): { moveIds: string[]; movePp: Record<string, number>; result: MoveLearnResult } {
+  const unlocked = movesLearnedBetween(speciesId, fromLevel, toLevel);
+  const nextMoves = [...moveIds];
+  const nextPp = { ...(movePp ?? fullPpFor(moveIds)) };
+  const learned: string[] = [];
+  const pending: string[] = [];
+
+  for (const moveId of unlocked) {
+    if (nextMoves.includes(moveId)) continue;
+    if (nextMoves.length < MAX_MOVES) {
+      nextMoves.push(moveId);
+      nextPp[moveId] = getMove(moveId).pp;
+      learned.push(moveId);
+    } else {
+      pending.push(moveId);
+    }
+  }
+  return { moveIds: nextMoves, movePp: nextPp, result: { learned, pending } };
+}
+
 export interface LevelUpResult {
   member: PartyMember;
   leveledUp: boolean;
@@ -158,6 +220,8 @@ export interface LevelUpResult {
   /** Set when this level-up crossed a starter's evolvesAtLevel threshold — the UI should play an
    * evolution reveal before (or alongside) the usual level-up stat comparison. */
   evolution: EvolutionReveal | null;
+  /** Moves gained (and moves that need a slot freed) as a result of this level-up. */
+  moveLearning: MoveLearnResult;
 }
 
 /**
@@ -184,6 +248,7 @@ export function addExperience(member: PartyMember, xpGained: number): LevelUpRes
   const resolved = resolveEvolutionChain(member.speciesId, member.displayName, member.types, member.baseStats, level);
   const newMaxHp = effectiveStats(resolved.baseStats, level).hp;
   const hpGain = newMaxHp - prevMaxHp;
+  const moves = learnMovesForLevelUp(resolved.speciesId, member.moveIds, member.movePp, member.level, level);
 
   return {
     member: {
@@ -194,18 +259,22 @@ export function addExperience(member: PartyMember, xpGained: number): LevelUpRes
       displayName: resolved.displayName,
       types: resolved.types,
       baseStats: resolved.baseStats,
+      moveIds: moves.moveIds,
+      movePp: moves.movePp,
       currentHp: levelsGained > 0 ? Math.min(newMaxHp, member.currentHp + hpGain) : member.currentHp,
     },
     leveledUp: levelsGained > 0,
     newLevel: level,
     levelsGained,
     evolution: resolved.evolution,
+    moveLearning: moves.result,
   };
 }
 
 export interface DirectLevelUpResult {
   member: PartyMember;
   evolution: EvolutionReveal | null;
+  moveLearning: MoveLearnResult;
 }
 
 /** Direct +1 level (e.g. the Kinnie item) — same partial-HP-top-up and evolution-check rules as
@@ -216,6 +285,7 @@ export function applyLevelUp(member: PartyMember): DirectLevelUpResult {
   const resolved = resolveEvolutionChain(member.speciesId, member.displayName, member.types, member.baseStats, newLevel);
   const newMaxHp = effectiveStats(resolved.baseStats, newLevel).hp;
   const hpGain = newMaxHp - prevMaxHp;
+  const moves = learnMovesForLevelUp(resolved.speciesId, member.moveIds, member.movePp, member.level, newLevel);
   return {
     member: {
       ...member,
@@ -224,8 +294,11 @@ export function applyLevelUp(member: PartyMember): DirectLevelUpResult {
       displayName: resolved.displayName,
       types: resolved.types,
       baseStats: resolved.baseStats,
+      moveIds: moves.moveIds,
+      movePp: moves.movePp,
       currentHp: Math.min(newMaxHp, member.currentHp + hpGain),
     },
     evolution: resolved.evolution,
+    moveLearning: moves.result,
   };
 }

@@ -6,14 +6,17 @@ import { useGameStore, type ExperienceGainResult } from "../state/gameStore";
 import type { BattleParticipant } from "../game/creatureFactory";
 import { buildBiomeEncounterTable, rollEncounter } from "../game/encounterTable";
 import { getZoneEncounterSettings } from "../game/zones";
+import type { PartyMember, MoveLearnResult } from "../game/party";
 import {
   creatureFromPartyMember,
   partyMemberFromParticipant,
   partyMemberStats,
   applyLevelUp,
+  remainingPp,
+  isOutOfPp,
 } from "../game/party";
 import { xpRewardForLevel, currencyRewardForLevel } from "../game/progression";
-import { getMove } from "../game/movesRepo";
+import { getMove, LAST_RESORT_MOVE_ID } from "../game/movesRepo";
 import { pickBestAvailableBall, getItem, usableItems } from "../game/itemsRepo";
 import { BattleStateMachine, type Winner, type ActionOutcome } from "../engine/battleManager";
 import { attemptCatch, type ContainerType } from "../engine/catching";
@@ -29,6 +32,7 @@ import { HoverTip } from "./components/HoverTip";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { LevelUpModal, type LevelUpRevealData } from "./components/LevelUpModal";
 import { EvolutionModal, type EvolutionRevealData } from "./components/EvolutionModal";
+import { MoveLearnModal, type MoveLearnPrompt } from "./components/MoveLearnModal";
 import { colors } from "./theme";
 
 /** Chance a defeated or caught wild creature drops a Kinnie — rare, never sold. */
@@ -97,6 +101,8 @@ export function BattleScreen({ navigation, route }: Props) {
   const grantExperience = useGameStore((s) => s.grantExperience);
   const addItem = useGameStore((s) => s.addItem);
   const bumpPartyMemberLevel = useGameStore((s) => s.bumpPartyMemberLevel);
+  const spendPp = useGameStore((s) => s.spendPp);
+  const replacePartyMemberMove = useGameStore((s) => s.replacePartyMemberMove);
   const party = useGameStore((s) => s.party);
 
   const [activeUid] = useState<string | undefined>(() => party.find((m) => m.currentHp > 0)?.uid);
@@ -150,18 +156,47 @@ export function BattleScreen({ navigation, route }: Props) {
   const playerAnim = useCombatantAnimation();
   const enemyAnim = useCombatantAnimation();
   const stageRef = useRef<BattleStageHandle>(null);
+  const [movePrompts, setMovePrompts] = useState<MoveLearnPrompt[]>([]);
+  /** The enemy's remaining PP for this battle only — wild creatures aren't persisted. */
+  const enemyPpRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     markSeen(enemy.creature.speciesId);
   }, [enemy.creature.speciesId, markSeen]);
 
+  /**
+   * Records what a level-up did to the moveset: freshly learned moves just get a log line,
+   * while moves with nowhere to go queue a prompt shown once the reveal modals are done.
+   */
+  function queueMoveLearning(member: PartyMember, learning: MoveLearnResult) {
+    for (const moveId of learning.learned) {
+      pushLog([`${member.displayName} learned ${getMove(moveId).name}!`]);
+    }
+    if (learning.pending.length > 0) {
+      setMovePrompts((prev) => [
+        ...prev,
+        ...learning.pending.map((moveId) => ({
+          uid: member.uid,
+          displayName: member.displayName,
+          newMoveId: moveId,
+          currentMoveIds: member.moveIds,
+        })),
+      ]);
+    }
+  }
+
   function pushLog(lines: string[]) {
     setLog((prev) => [...prev, ...lines].slice(-MAX_LOG_LINES));
   }
 
+  /** The enemy is rationed too, so it can't spam a 6-PP heavy hitter all battle. Falls back
+   * to Scrap once everything is spent, exactly as the player does. */
   function pickEnemyMoveId(): string {
-    const ids = enemy.moveIds;
-    return ids[Math.floor(Math.random() * ids.length)];
+    const usable = enemy.moveIds.filter((id) => (enemyPpRef.current[id] ?? getMove(id).pp) > 0);
+    if (usable.length === 0) return LAST_RESORT_MOVE_ID;
+    const chosen = usable[Math.floor(Math.random() * usable.length)];
+    enemyPpRef.current[chosen] = (enemyPpRef.current[chosen] ?? getMove(chosen).pp) - 1;
+    return chosen;
   }
 
   /** 10% chance, rolled once per defeated/caught wild creature — Kinnie is never sold, drop-only. */
@@ -199,6 +234,7 @@ export function BattleScreen({ navigation, route }: Props) {
 
     if (xpResult?.leveledUp && memberBefore && oldStats) {
       if (xpResult.evolution) setEvolutionReveal(xpResult.evolution);
+      queueMoveLearning(xpResult.member, xpResult.moveLearning);
       setLevelUpReveal({
         // Post-evolution species/types/name (xpResult.member), not memberBefore's — a level-up
         // that evolves the creature should show the comparison for what it now actually is.
@@ -233,17 +269,38 @@ export function BattleScreen({ navigation, route }: Props) {
     if (outcome.action.kind !== "move" || !outcome.target) return [];
     if (!outcome.hit) return ["But it missed!"];
 
-    const lines: string[] = [`Dealt ${outcome.damage} damage!`];
-    if (outcome.crit) lines.push("A critical hit!");
-
     const move = getMove(outcome.action.moveId);
-    const multiplier = getTypeMultiplier(move.type, outcome.target.types);
-    if (multiplier > 1) lines.push("It's super effective!");
-    else if (multiplier > 0 && multiplier < 1) lines.push("It's not very effective...");
-    else if (multiplier === 0) lines.push("It had no effect...");
+    const lines: string[] = [];
+
+    if (move.category !== "status") {
+      lines.push(`Dealt ${outcome.damage} damage!`);
+      if (outcome.crit) lines.push("A critical hit!");
+
+      const multiplier = getTypeMultiplier(move.type, outcome.target.types);
+      if (multiplier > 1) lines.push("It's super effective!");
+      else if (multiplier > 0 && multiplier < 1) lines.push("It's not very effective...");
+      else if (multiplier === 0) lines.push("It had no effect...");
+    }
+
+    lines.push(...statChangeLines(outcome, playerActiveId));
 
     if (outcome.target.currentHp <= 0) lines.push(`${labelForCreature(outcome.target, playerActiveId)} fainted!`);
     return lines;
+  }
+
+  /** Narrates stat stage shifts the way the mainline games do — "X's Attack rose sharply!" —
+   * including the case where a stat is already pinned at the end of the -6..+6 table. */
+  function statChangeLines(outcome: ActionOutcome, playerActiveId: string): string[] {
+    if (!outcome.statChanges?.length) return [];
+    return outcome.statChanges.map((change) => {
+      const affected = change.target === "self" ? outcome.actor : outcome.target!;
+      const who = labelForCreature(affected, playerActiveId);
+      if (change.stages === 0) return `${who}'s ${change.statName} won't go any further!`;
+      const magnitude = Math.abs(change.stages) >= 2 ? " sharply" : "";
+      return change.stages > 0
+        ? `${who}'s ${change.statName} rose${magnitude}!`
+        : `${who}'s ${change.statName} fell${magnitude}!`;
+    });
   }
 
   /**
@@ -352,6 +409,12 @@ export function BattleScreen({ navigation, route }: Props) {
 
   function handleMove(moveId: string, moveName: string) {
     if (outcome || forcedSwitchPending || resolving || !fsm || fsm.getState() !== "ACTION_SELECT") return;
+    if (!activeMember) return;
+    // Scrap is the free last resort and is never rationed.
+    if (moveId !== LAST_RESORT_MOVE_ID) {
+      if (remainingPp(activeMember, moveId) <= 0) return;
+      spendPp(activeMember.uid, moveId);
+    }
     const ctx = fsm.getContext();
     runTurn({ kind: "move", actorId: ctx.playerActive.id, moveId }, [`You used ${moveName}.`]);
   }
@@ -405,7 +468,8 @@ export function BattleScreen({ navigation, route }: Props) {
       // Preview via the same pure function the store will apply on dismiss (see below) — this is
       // how the evolution check (and any resulting species/type/stat change) gets surfaced here,
       // rather than duplicating the level-up math inline.
-      const { member: leveledMember, evolution } = applyLevelUp(activeMember);
+      const { member: leveledMember, evolution, moveLearning } = applyLevelUp(activeMember);
+      queueMoveLearning(leveledMember, moveLearning);
       const newStats = partyMemberStats(leveledMember);
 
       setShowItems(false);
@@ -518,6 +582,8 @@ export function BattleScreen({ navigation, route }: Props) {
   }
 
   const playerMoves = activeMember.moveIds.map(getMove);
+  const outOfPp = isOutOfPp(activeMember);
+  const lastResortMove = getMove(LAST_RESORT_MOVE_ID);
   const reserves = party.filter((m) => m.uid !== activeMember.uid && m.currentHp > 0);
 
   return (
@@ -555,23 +621,62 @@ export function BattleScreen({ navigation, route }: Props) {
       </ScrollView>
 
       <View style={styles.actionGrid}>
-        {playerMoves.map((move) => (
+        {playerMoves.map((move) => {
+          const pp = activeMember ? remainingPp(activeMember, move.id) : move.pp;
+          const spent = pp <= 0;
+          return (
+            <HoverTip
+              key={move.id}
+              style={styles.moveButtonHoverWrap}
+              text={`${move.category === "status" ? "Status" : move.category === "special" ? "Special" : "Physical"} ${move.type} move. ${
+                move.category === "status" ? "No damage" : `Power ${move.power}`
+              }, accuracy ${move.accuracy}%. ${pp} of ${move.pp} uses left — rest at a Healing Centre to restore them.`}
+            >
+              <Pressable
+                testID={`move-${move.id}`}
+                onPress={() => handleMove(move.id, move.name)}
+                disabled={actionsDisabled || spent}
+                style={({ pressed }) => [
+                  styles.moveButton,
+                  spent && styles.moveButtonSpent,
+                  pressed && !spent && styles.moveButtonPressed,
+                ]}
+              >
+                <View style={styles.moveHeaderRow}>
+                  <Text style={[styles.moveName, spent && styles.moveNameSpent]}>{move.name}</Text>
+                  <Text style={[styles.movePp, spent && styles.movePpSpent]}>
+                    {pp}/{move.pp}
+                  </Text>
+                </View>
+                <View style={styles.moveMetaRow}>
+                  <TypeBadge type={move.type} />
+                  <Text style={styles.moveMeta}>
+                    {move.category === "status" ? "status" : `${move.power} pwr`} · {move.accuracy}%
+                  </Text>
+                </View>
+              </Pressable>
+            </HoverTip>
+          );
+        })}
+        {outOfPp && (
           <HoverTip
-            key={move.id}
             style={styles.moveButtonHoverWrap}
-            text={`${move.category === "special" ? "Special" : "Physical"} ${move.type} move. Power ${move.power}, accuracy ${move.accuracy}%.`}
+            text="Every move is spent. Scrap is a weak last resort that never runs out — head for a Healing Centre."
           >
             <Pressable
-              testID={`move-${move.id}`}
-              onPress={() => handleMove(move.id, move.name)}
+              testID="move-scrap"
+              onPress={() => handleMove(LAST_RESORT_MOVE_ID, lastResortMove.name)}
               disabled={actionsDisabled}
-              style={({ pressed }) => [styles.moveButton, pressed && styles.moveButtonPressed]}
+              style={({ pressed }) => [styles.moveButton, styles.scrapButton, pressed && styles.moveButtonPressed]}
             >
-              <Text style={styles.moveName}>{move.name}</Text>
-              <TypeBadge type={move.type} />
+              <View style={styles.moveHeaderRow}>
+                <Text style={styles.moveName}>{lastResortMove.name}</Text>
+                <Text style={styles.movePp}>∞</Text>
+              </View>
+              <Text style={styles.moveMeta}>last resort — everything else is spent</Text>
             </Pressable>
           </HoverTip>
-        ))}
+        )}
         <HoverTip
           style={styles.moveButtonHoverWrap}
           text="Boosts your creature's stats for a few turns, then goes on cooldown. Costs the turn to activate."
@@ -748,7 +853,24 @@ export function BattleScreen({ navigation, route }: Props) {
         levelUpReveal && <LevelUpModal data={levelUpReveal} onDismiss={handleDismissLevelUp} />
       )}
 
-      <Modal visible={!!outcome && !levelUpReveal && !evolutionReveal} transparent animationType="fade" onRequestClose={() => {}}>
+      {!evolutionReveal && !levelUpReveal && movePrompts.length > 0 && (
+        <MoveLearnModal
+          prompt={movePrompts[0]}
+          onReplace={(forgetMoveId) => {
+            replacePartyMemberMove(movePrompts[0].uid, forgetMoveId, movePrompts[0].newMoveId);
+            pushLog([
+              `${movePrompts[0].displayName} forgot ${getMove(forgetMoveId).name} and learned ${getMove(movePrompts[0].newMoveId).name}!`,
+            ]);
+            setMovePrompts((prev) => prev.slice(1));
+          }}
+          onSkip={() => {
+            pushLog([`${movePrompts[0].displayName} did not learn ${getMove(movePrompts[0].newMoveId).name}.`]);
+            setMovePrompts((prev) => prev.slice(1));
+          }}
+        />
+      )}
+
+      <Modal visible={!!outcome && !levelUpReveal && !evolutionReveal && movePrompts.length === 0} transparent animationType="fade" onRequestClose={() => {}}>
         <View style={styles.resultOverlay}>
           <Text style={styles.resultTitle}>
             {outcome === "player"
@@ -832,6 +954,41 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     marginBottom: 6,
+  },
+  moveHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  moveMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  moveMeta: {
+    color: colors.textMuted,
+    fontSize: 11,
+  },
+  movePp: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  movePpSpent: {
+    color: colors.danger,
+  },
+  moveNameSpent: {
+    color: colors.textMuted,
+  },
+  /** A spent move stays visible (so you can see what you have) but reads as unavailable. */
+  moveButtonSpent: {
+    opacity: 0.5,
+    borderStyle: "dashed",
+  },
+  scrapButton: {
+    borderColor: colors.danger,
   },
   cruxButton: {
     borderColor: colors.accent,
