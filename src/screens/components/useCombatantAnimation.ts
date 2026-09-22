@@ -90,6 +90,20 @@ export function useCombatantAnimation() {
     ]).start();
   }
 
+  /** A creature arriving on the field: drops in small, overshoots, settles. */
+  function appear() {
+    opacity.setValue(0);
+    scale.setValue(0.6);
+    shakeX.setValue(0);
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: false }),
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.12, duration: 200, useNativeDriver: false }),
+        Animated.timing(scale, { toValue: 1, duration: 140, useNativeDriver: false }),
+      ]),
+    ]).start();
+  }
+
   function reset() {
     shakeX.setValue(0);
     opacity.setValue(1);
@@ -98,5 +112,5 @@ export function useCombatantAnimation() {
     healFlash.setValue(0);
   }
 
-  return { shakeX, opacity, scale, hitFlash, healFlash, windUp, lunge, hit, faint, heal, cruxGlow, wobble, fleeOut, reset };
+  return { shakeX, opacity, scale, hitFlash, healFlash, windUp, lunge, hit, faint, heal, cruxGlow, wobble, fleeOut, appear, reset };
 }

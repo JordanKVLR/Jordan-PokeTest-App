@@ -281,6 +281,20 @@ export class BattleStateMachine {
   }
 
   /**
+   * Reopens a battle that ended only because the enemy fainted, for a trainer sending out
+   * their next creature. The caller swaps ctx.enemyActive first; this just takes the machine
+   * out of BATTLE_END and back to accepting actions. Refuses if the player is the one down,
+   * since that is a real loss and not a swap.
+   */
+  restartAfterEnemySwap(): void {
+    if (this.state !== "BATTLE_END") throw new Error(`Cannot resume from state ${this.state}`);
+    if (this.ctx.playerActive.currentHp <= 0) throw new Error("Cannot resume a battle the player lost");
+    if (this.ctx.enemyActive.currentHp <= 0) throw new Error("Cannot resume before the new foe is swapped in");
+    this.setState("TURN_START");
+    this.setState("ACTION_SELECT");
+  }
+
+  /**
    * ACTION_SELECT -> PRIORITY_SORT -> ACTION_RESOLVE -> END_OF_TURN -> WIN_CHECK -> (TURN_START | BATTLE_END)
    *
    * `onActionResolved`, if given, fires synchronously once per action actually

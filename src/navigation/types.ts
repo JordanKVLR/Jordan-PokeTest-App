@@ -14,7 +14,7 @@ export type RootStackParamList = {
   /** startAt overrides the zone's default playerStart — used when walking back into a zone via
    * its entrance tile, so the player lands exactly where they left it (the exit tile they used). */
   Map: { zoneId: string; startAt?: { row: number; col: number } };
-  Battle: { biome: BiomeType };
+  Battle: { biome: BiomeType; trainerId?: string };
   Party: undefined;
   Codex: undefined;
   Bag: undefined;

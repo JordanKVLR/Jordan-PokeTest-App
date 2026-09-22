@@ -212,6 +212,50 @@ export function TileArt({ type, seed, size }: { type: TileType; seed: number; si
 }
 
 /**
+ * An NPC trainer waiting on the road. Deliberately a different silhouette from the player —
+ * no straw hat, a shoulder cape — and gym leaders get a medal badge above them so you can
+ * see the boss fight coming from across the map.
+ */
+export function TrainerSprite({
+  size,
+  isGymLeader,
+  defeated,
+}: {
+  size: number;
+  isGymLeader?: boolean;
+  defeated?: boolean;
+}) {
+  const coat = isGymLeader ? "#8d6bb5" : "#3f7b8a";
+  const coatDark = isGymLeader ? "#6a4d90" : "#2d5d69";
+  return (
+    <Svg width={size} height={size} viewBox="0 0 100 100" opacity={defeated ? 0.45 : 1}>
+      <Ellipse cx={50} cy={90} rx={20} ry={5} fill="rgba(35,60,45,0.28)" />
+      <Rect x={41} y={70} width={8} height={16} rx={3.5} fill="#43484f" />
+      <Rect x={52} y={70} width={8} height={16} rx={3.5} fill="#353a40" />
+      <Path d="M35 50 q15 -7 30 0 l5 22 q-20 6 -40 0 z" fill={coat} stroke={coatDark} strokeWidth={2.2} />
+      <Path d="M35 50 q15 8 30 0 l3 9 q-18 7 -36 0 z" fill={coatDark} opacity={0.75} />
+      <Rect x={27} y={52} width={8} height={18} rx={4} fill={coat} stroke={coatDark} strokeWidth={2} />
+      <Rect x={65} y={52} width={8} height={18} rx={4} fill={coat} stroke={coatDark} strokeWidth={2} />
+      <Circle cx={50} cy={37} r={16} fill="#f0c9a0" stroke="#c99a70" strokeWidth={2} />
+      <Circle cx={44} cy={38} r={3} fill="#2b3a44" />
+      <Circle cx={56} cy={38} r={3} fill="#2b3a44" />
+      <Path d="M34 33 q16 -16 32 0 q-6 -12 -16 -12 q-10 0 -16 12 z" fill="#4a3524" />
+      {defeated ? (
+        <Path d="M42 46 q8 -5 16 0" stroke="#a8724c" strokeWidth={2} fill="none" strokeLinecap="round" />
+      ) : (
+        <Path d="M44 45 q6 5 12 0" stroke="#a8724c" strokeWidth={2} fill="none" strokeLinecap="round" />
+      )}
+      {isGymLeader && !defeated && (
+        <G>
+          <Circle cx={50} cy={11} r={9} fill="#f3c14a" stroke="#b98a16" strokeWidth={2} />
+          <Path d="M50 5 l2 4 h4 l-3 3 l1 4 l-4 -2 l-4 2 l1 -4 l-3 -3 h4 z" fill="#fff6d8" />
+        </G>
+      )}
+    </Svg>
+  );
+}
+
+/**
  * The player: a small figure in a wide straw hat (the żappa hat worn in the fields), drawn
  * from four angles so movement reads directionally instead of as a sliding token.
  */

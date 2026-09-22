@@ -16,6 +16,8 @@ import {
 import { defaultStartingInventory, getItem } from "../game/itemsRepo";
 import { getMove } from "../game/movesRepo";
 
+export type ControlMode = "joystick" | "dpad";
+
 const SAVE_KEY = "melita-save";
 const SAVE_VERSION = 1;
 const STARTING_ZONE_ID = "melita_woods";
@@ -57,6 +59,16 @@ interface GameState {
    * whether to offer "Continue" should wait for this before trusting `party.length`. */
   hasHydrated: boolean;
   setHasHydrated: (value: boolean) => void;
+  /** Overworld control scheme. Joystick suits a thumb; the D-pad suits a mouse or keyboard. */
+  controlMode: ControlMode;
+  setControlMode: (mode: ControlMode) => void;
+  /** Gym medals earned, in the order they were won — these gate the later stages. */
+  medals: string[];
+  awardMedal: (medalId: string) => void;
+  hasMedal: (medalId: string) => boolean;
+  /** Trainers already beaten, so they don't re-challenge on every pass. */
+  defeatedTrainerIds: string[];
+  markTrainerDefeated: (trainerId: string) => void;
 
   selectStarter: (line: StarterLineName) => void;
   recordBattleResult: (won: boolean) => void;
@@ -108,6 +120,21 @@ export const useGameStore = create<GameState>()(
     currency: STARTING_CURRENCY,
     hasHydrated: false,
     setHasHydrated: (value) => set({ hasHydrated: value }),
+    controlMode: "joystick",
+    setControlMode: (mode) => set({ controlMode: mode }),
+    medals: [],
+    awardMedal: (medalId) =>
+      set((state) =>
+        state.medals.includes(medalId) ? state : { medals: [...state.medals, medalId] }
+      ),
+    hasMedal: (medalId) => get().medals.includes(medalId),
+    defeatedTrainerIds: [],
+    markTrainerDefeated: (trainerId) =>
+      set((state) =>
+        state.defeatedTrainerIds.includes(trainerId)
+          ? state
+          : { defeatedTrainerIds: [...state.defeatedTrainerIds, trainerId] }
+      ),
 
     selectStarter: (line) => {
       const participant = buildStarterParticipant(line, STARTER_STARTING_LEVEL, "player-1");
@@ -283,6 +310,8 @@ export const useGameStore = create<GameState>()(
 
     resetGame: () =>
       set({
+        medals: [],
+        defeatedTrainerIds: [],
         playerName: DEFAULT_PLAYER_NAME,
         selectedLine: null,
         currentZoneId: STARTING_ZONE_ID,
@@ -302,6 +331,9 @@ export const useGameStore = create<GameState>()(
       // `set`/`get`-bound action functions can't survive JSON serialization anyway, so those
       // are dropped automatically, but hasHydrated needs an explicit exclusion).
       partialize: (state) => ({
+        controlMode: state.controlMode,
+        medals: state.medals,
+        defeatedTrainerIds: state.defeatedTrainerIds,
         playerName: state.playerName,
         selectedLine: state.selectedLine,
         currentZoneId: state.currentZoneId,

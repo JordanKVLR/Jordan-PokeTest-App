@@ -34,6 +34,10 @@ export interface BattleStageHandle {
   fireProjectile: (moveType: TypeName, direction: ProjectileDirection) => void;
   /** Animates a ball arcing from the player's position to the wild creature. */
   throwBall: () => void;
+  /** Expanding rings and a gold wash for invoking the Crux Aura. */
+  cruxBurst: () => void;
+  /** A soft sparkle wash when an item is used, so it reads as more than a log line. */
+  itemFlash: (tint?: string) => void;
 }
 
 interface CombatantProps {
@@ -91,6 +95,23 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
         ballOpacity.setValue(0)
       );
     },
+    cruxBurst() {
+      cruxRing.setValue(0);
+      Animated.parallel([
+        Animated.timing(cruxRing, { toValue: 1, duration: 620, useNativeDriver: false }),
+        Animated.sequence([
+          Animated.timing(cruxWash, { toValue: 0.55, duration: 180, useNativeDriver: false }),
+          Animated.timing(cruxWash, { toValue: 0, duration: 520, useNativeDriver: false }),
+        ]),
+      ]).start();
+    },
+    itemFlash(tint = "#7ddba0") {
+      setItemTint(tint);
+      Animated.sequence([
+        Animated.timing(itemWash, { toValue: 0.5, duration: 160, useNativeDriver: false }),
+        Animated.timing(itemWash, { toValue: 0, duration: 440, useNativeDriver: false }),
+      ]).start();
+    },
   }));
 
   const enemyCenter = { x: stageWidth - ENEMY_RIGHT - ENEMY_AVATAR_SIZE / 2, y: ENEMY_TOP + ENEMY_AVATAR_SIZE / 2 };
@@ -108,9 +129,31 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
   const ballX = ballProgress.interpolate({ inputRange: [0, 1], outputRange: [playerCenter.x, enemyCenter.x] });
   const ballSpin = ballProgress.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "540deg"] });
 
+  const cruxRing = useRef(new Animated.Value(0)).current;
+  const cruxWash = useRef(new Animated.Value(0)).current;
+  const itemWash = useRef(new Animated.Value(0)).current;
+  const [itemTint, setItemTint] = useState("#7ddba0");
+  const cruxRingScale = cruxRing.interpolate({ inputRange: [0, 1], outputRange: [0.3, 2.4] });
+  const cruxRingOpacity = cruxRing.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0, 0.75, 0] });
+
   return (
     <View style={styles.stage} onLayout={(e) => setStageWidth(e.nativeEvent.layout.width)}>
       <BattleBackdrop biome={biome} width={stageWidth} height={STAGE_HEIGHT} />
+
+      <Animated.View pointerEvents="none" style={[styles.fullWash, { opacity: cruxWash, backgroundColor: "#f3c14a" }]} />
+      <Animated.View pointerEvents="none" style={[styles.fullWash, { opacity: itemWash, backgroundColor: itemTint }]} />
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.cruxRing,
+          {
+            bottom: PLAYER_BOTTOM,
+            left: PLAYER_LEFT,
+            opacity: cruxRingOpacity,
+            transform: [{ scale: cruxRingScale }],
+          },
+        ]}
+      />
 
       <View pointerEvents="none" style={[styles.platform, styles.enemyPlatform]}>
         <BattlePlatform size={ENEMY_AVATAR_SIZE * 1.5} biome={biome} />
@@ -260,6 +303,21 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     overflow: "hidden",
     position: "relative",
+  },
+  fullWash: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  cruxRing: {
+    position: "absolute",
+    width: PLAYER_AVATAR_SIZE,
+    height: PLAYER_AVATAR_SIZE,
+    borderRadius: PLAYER_AVATAR_SIZE / 2,
+    borderWidth: 4,
+    borderColor: "#f3c14a",
   },
   platform: {
     position: "absolute",

@@ -5,6 +5,9 @@ import type { RootStackParamList } from "../navigation/types";
 import { useGameStore, type ExperienceGainResult } from "../state/gameStore";
 import type { BattleParticipant } from "../game/creatureFactory";
 import { buildBiomeEncounterTable, rollEncounter } from "../game/encounterTable";
+import { getTrainer, trainerCreatureMoves } from "../game/trainers";
+import { buildParticipant } from "../game/creatureFactory";
+import { getDexEntry } from "../game/speciesCatalog";
 import { getZoneEncounterSettings } from "../game/zones";
 import type { PartyMember, MoveLearnResult } from "../game/party";
 import {
@@ -104,6 +107,8 @@ export function BattleScreen({ navigation, route }: Props) {
   const bumpPartyMemberLevel = useGameStore((s) => s.bumpPartyMemberLevel);
   const spendPp = useGameStore((s) => s.spendPp);
   const replacePartyMemberMove = useGameStore((s) => s.replacePartyMemberMove);
+  const markTrainerDefeated = useGameStore((s) => s.markTrainerDefeated);
+  const awardMedal = useGameStore((s) => s.awardMedal);
   const party = useGameStore((s) => s.party);
 
   const [activeUid] = useState<string | undefined>(() => party.find((m) => m.currentHp > 0)?.uid);
@@ -119,10 +124,33 @@ export function BattleScreen({ navigation, route }: Props) {
     () => buildBiomeEncounterTable(biome, selectedLine, getZoneEncounterSettings(currentZoneId)),
     [biome, selectedLine, currentZoneId]
   );
-  const enemy = useMemo<BattleParticipant>(
-    () => rollEncounter(encounterTable, `enemy-${Math.random().toString(36).slice(2, 8)}`),
-    [encounterTable]
-  );
+  const trainer = route.params.trainerId ? getTrainer(route.params.trainerId) : undefined;
+  const isTrainerBattle = trainer !== undefined;
+
+  /** A trainer sends out their whole party in order; the wild path is a single creature. */
+  const enemyTeam = useMemo<BattleParticipant[]>(() => {
+    if (trainer) {
+      return trainer.party.map((slot, i) => {
+        const entry = getDexEntry(slot.speciesId);
+        const stats = entry?.stats ?? { hp: 60, atk: 60, def: 60, spatk: 60, spdef: 60, speed: 60 };
+        return buildParticipant(
+          `foe-${i}-${Math.random().toString(36).slice(2, 6)}`,
+          slot.speciesId,
+          entry?.name ?? slot.speciesId,
+          entry?.types ?? ["Normal"],
+          stats,
+          slot.level,
+          trainerCreatureMoves(slot.speciesId, slot.level)
+        );
+      });
+    }
+    return [rollEncounter(encounterTable, `enemy-${Math.random().toString(36).slice(2, 8)}`)];
+  }, [trainer, encounterTable]);
+
+  const [enemyIndex, setEnemyIndex] = useState(0);
+  const enemy = enemyTeam[Math.min(enemyIndex, enemyTeam.length - 1)];
+  /** XP/gold from foes already beaten this battle, banked as each one goes down. */
+  const bankedRef = useRef({ xp: 0, money: 0 });
 
   const fsmRef = useRef<BattleStateMachine | null>(null);
   if (!fsmRef.current && activeMember) {
@@ -187,6 +215,11 @@ export function BattleScreen({ navigation, route }: Props) {
     }
   }
 
+  /** Wild creatures are "Wild X"; a trainer's creature is just itself. */
+  function foeLabel(name: string): string {
+    return isTrainerBattle ? name : `Wild ${name}`;
+  }
+
   function pushLog(lines: string[]) {
     setLog((prev) => [...prev, ...lines].slice(-MAX_LOG_LINES));
   }
@@ -216,9 +249,20 @@ export function BattleScreen({ navigation, route }: Props) {
     recordBattleResult(result === "player");
     if (result !== "player") return;
 
-    const money = currencyRewardForLevel(enemy.creature.level);
-    const xp = xpRewardForLevel(enemy.creature.level);
+    // Trainers pay considerably better than the grass, and gym leaders better again.
+    const multiplier = trainer?.rewardMultiplier ?? 1;
+    const money = Math.round((bankedRef.current.money || currencyRewardForLevel(enemy.creature.level)) * multiplier);
+    const xp = Math.round((bankedRef.current.xp || xpRewardForLevel(enemy.creature.level)) * multiplier);
     earnCurrency(money);
+
+    if (trainer) {
+      markTrainerDefeated(trainer.id);
+      pushLog([trainer.defeatLine]);
+      if (trainer.medalId) {
+        awardMedal(trainer.medalId);
+        pushLog([`You earned the ${trainer.medalName}!`]);
+      }
+    }
 
     // Snapshot "before" stats off the current store state, ahead of grantExperience applying the level-up.
     const memberBefore = party.find((m) => m.uid === finalCtx.playerActive.id);
@@ -339,7 +383,9 @@ export function BattleScreen({ navigation, route }: Props) {
       const actingAnim = isPlayer ? playerAnim : enemyAnim;
       const reactingAnim = isPlayer ? enemyAnim : playerAnim;
 
-      const announceLines = isPlayer ? playerLines : [`Wild ${enemy.displayName} used ${getMove(enemyMoveId).name}.`];
+      const announceLines = isPlayer
+        ? playerLines
+        : [`${foeLabel(enemy.displayName)} used ${getMove(enemyMoveId).name}.`];
       pushLog([...announceLines, ...resultLinesFor(outcome, playerActiveId)]);
 
       function applyReaction() {
@@ -374,6 +420,23 @@ export function BattleScreen({ navigation, route }: Props) {
       if (activeFsm.getState() !== "BATTLE_END") return;
 
       if (finalSnapshot.enemyHp <= 0) {
+        // Bank this foe's reward, then send out the trainer's next creature if they have one.
+        bankedRef.current.xp += xpRewardForLevel(enemy.creature.level);
+        bankedRef.current.money += currencyRewardForLevel(enemy.creature.level);
+
+        const nextIndex = enemyIndex + 1;
+        if (isTrainerBattle && nextIndex < enemyTeam.length) {
+          const nextFoe = enemyTeam[nextIndex];
+          pushLog([`${trainer!.name} sends out ${nextFoe.displayName}!`]);
+          setEnemyIndex(nextIndex);
+          enemyPpRef.current = {};
+          // Swap the new foe into the live context and restart the machine around it.
+          ctx.enemyActive = nextFoe.creature;
+          setSnapshot(snapshotFrom(ctx));
+          enemyAnim.appear();
+          activeFsm.restartAfterEnemySwap();
+          return;
+        }
         finishBattle("player", ctx);
         return;
       }
@@ -427,11 +490,16 @@ export function BattleScreen({ navigation, route }: Props) {
     const ctx = fsm.getContext();
     const name = activeMember?.displayName ?? "Your creature";
     playerAnim.cruxGlow();
+    stageRef.current?.cruxBurst();
     runTurn({ kind: "invoke_crux", actorId: ctx.playerActive.id }, [`${name} invokes the Crux Aura!`]);
   }
 
   function handleFlee() {
     if (!fsm || outcome || forcedSwitchPending || resolving || fsm.getState() !== "ACTION_SELECT") return;
+    if (isTrainerBattle) {
+      pushLog(["There's no running from a challenge."]);
+      return;
+    }
     playerAnim.fleeOut();
     pushLog(["You turned tail and ran!"]);
     setOutcome("fled");
@@ -455,6 +523,7 @@ export function BattleScreen({ navigation, route }: Props) {
       consumeItem(itemId);
       setShowItems(false);
       playerAnim.heal();
+      stageRef.current?.itemFlash("#7ddba0");
 
       runTurn({ kind: "item", actorId: ctx.playerActive.id, itemId }, [
         `You used the ${item.name}!`,
@@ -472,6 +541,7 @@ export function BattleScreen({ navigation, route }: Props) {
       // rather than duplicating the level-up math inline.
       const { member: leveledMember, evolution, moveLearning } = applyLevelUp(activeMember);
       queueMoveLearning(leveledMember, moveLearning);
+      stageRef.current?.itemFlash("#f3c14a");
       const newStats = partyMemberStats(leveledMember);
 
       setShowItems(false);
@@ -710,16 +780,24 @@ export function BattleScreen({ navigation, route }: Props) {
           <Pressable
             testID="catch-ball"
             onPress={() => setShowTraps(true)}
-            disabled={actionsDisabled || !hasTraps}
+            disabled={actionsDisabled || !hasTraps || isTrainerBattle}
             style={({ pressed }) => [
               styles.moveButton,
               styles.catchButton,
-              (actionsDisabled || !hasTraps) && styles.moveButtonDisabled,
+              (actionsDisabled || !hasTraps || isTrainerBattle) && styles.moveButtonDisabled,
               pressed && styles.moveButtonPressed,
             ]}
           >
-            <Text style={styles.moveName}>{hasTraps ? "Throw a Trap" : "No traps left"}</Text>
-            <Text style={styles.cruxHint}>{hasTraps ? "choose which one — costs the turn if it fails" : "check your Bag"}</Text>
+            <Text style={styles.moveName}>
+              {isTrainerBattle ? "Can't Trap" : hasTraps ? "Throw a Trap" : "No traps left"}
+            </Text>
+            <Text style={styles.cruxHint}>
+              {isTrainerBattle
+                ? "that creature belongs to someone"
+                : hasTraps
+                  ? "choose which one — costs the turn if it fails"
+                  : "check your Bag"}
+            </Text>
           </Pressable>
         </HoverTip>
         <HoverTip style={styles.moveButtonHoverWrap} text="Send out a different party member. Voluntary switches cost the turn; a fainted lead gets a free forced switch instead.">

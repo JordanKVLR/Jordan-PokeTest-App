@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { useGameStore } from "../state/gameStore";
+import { ALL_MEDALS } from "../game/zoneProgression";
 import { partyMemberStats } from "../game/party";
 import { getZoneName } from "../game/zones";
 import { HpBar } from "./components/HpBar";
@@ -18,6 +19,7 @@ export function HomeScreen({ navigation }: Props) {
   const currentZoneId = useGameStore((s) => s.currentZoneId);
   const party = useGameStore((s) => s.party);
   const battlesWon = useGameStore((s) => s.battlesWon);
+  const medals = useGameStore((s) => s.medals);
   const currency = useGameStore((s) => s.currency);
 
   const leadMember = party[0];
@@ -50,6 +52,25 @@ export function HomeScreen({ navigation }: Props) {
           </View>
         )}
         <Text style={styles.stat}>Battles won: {battlesWon}</Text>
+
+        {/* Medal track: four gyms across the run, shown filled as they are won. */}
+        <View style={styles.medalRow}>
+          {ALL_MEDALS.map((medal) => {
+            const earned = medals.includes(medal.medalId);
+            return (
+              <View
+                key={medal.medalId}
+                testID={`medal-${medal.medalId}${earned ? "-earned" : ""}`}
+                style={[styles.medal, earned && styles.medalEarned]}
+              >
+                <Text style={[styles.medalGlyph, earned && styles.medalGlyphEarned]}>{earned ? "★" : "☆"}</Text>
+                <Text style={[styles.medalLabel, earned && styles.medalLabelEarned]} numberOfLines={1}>
+                  {medal.medalName.replace(" Medal", "")}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
       </View>
 
       <View style={styles.actions}>
@@ -147,6 +168,42 @@ const styles = StyleSheet.create({
   },
   badgeRow: {
     flexDirection: "row",
+  },
+  medalRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 8,
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
+  medal: {
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    minWidth: 68,
+  },
+  medalEarned: {
+    borderColor: colors.accent,
+    backgroundColor: "#fff6e2",
+  },
+  medalGlyph: {
+    fontSize: 16,
+    color: colors.textMuted,
+  },
+  medalGlyphEarned: {
+    color: colors.accent,
+  },
+  medalLabel: {
+    fontSize: 9,
+    color: colors.textMuted,
+    fontWeight: "700",
+  },
+  medalLabelEarned: {
+    color: colors.accentDeep,
   },
   stat: {
     color: colors.textMuted,

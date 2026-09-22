@@ -12,10 +12,12 @@ import {
   isHealTile,
   findTilePosition,
 } from "../game/mapData";
-import { TileArt, PlayerSprite } from "../art/tileArt";
-import { PrimaryButton } from "./components/PrimaryButton";
+import { TileArt, PlayerSprite, TrainerSprite } from "../art/tileArt";
+import { trainerAt, trainersForZone } from "../game/trainers";
+import { medalRequiredToEnter, getStage, STAGES } from "../game/zoneProgression";
+import { CreatureAvatar } from "./components/CreatureAvatar";
+import { Joystick } from "./components/Joystick";
 import { ScreenBackground } from "./components/ScreenBackground";
-import { HoverTip } from "./components/HoverTip";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { colors } from "./theme";
 
@@ -32,6 +34,8 @@ const ENCOUNTER_CHANCE = 0.195;
  * matching the classic "surprise encounter" screen-flash from the mainline games. */
 const ENCOUNTER_FLASH_SEQUENCE = [1, 0, 1, 0, 1, 0, 1];
 const ENCOUNTER_FLASH_STEP_MS = 90;
+const DRAWER_WIDTH = 116;
+const TOTAL_STAGES = STAGES.length;
 
 type Direction = "up" | "down" | "left" | "right";
 
@@ -66,6 +70,11 @@ export function MapScreen({ navigation, route }: Props) {
   const startPosition = route.params.startAt ?? map.playerStart;
   const setCurrentZone = useGameStore((s) => s.setCurrentZone);
   const healFaintedPartyMembers = useGameStore((s) => s.healFaintedPartyMembers);
+  const party = useGameStore((s) => s.party);
+  const medals = useGameStore((s) => s.medals);
+  const defeatedTrainerIds = useGameStore((s) => s.defeatedTrainerIds);
+  const controlMode = useGameStore((s) => s.controlMode);
+  const setControlMode = useGameStore((s) => s.setControlMode);
 
   const mapPixelWidth = map.rows[0].length * TILE_SIZE;
   const mapPixelHeight = map.rows.length * TILE_SIZE;
@@ -84,6 +93,22 @@ export function MapScreen({ navigation, route }: Props) {
     })
   ).current;
   const encounterFlash = useRef(new Animated.Value(0)).current;
+  /** The lead creature walks one tile behind, so it animates to where the player just was. */
+  const followerAnim = useRef(
+    new Animated.ValueXY({ x: startPosition.col * TILE_SIZE, y: startPosition.row * TILE_SIZE })
+  ).current;
+  const healGlow = useRef(new Animated.Value(0)).current;
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawerAnim = useRef(new Animated.Value(0)).current;
+  const leadCreature = party.find((m) => m.currentHp > 0) ?? party[0];
+  const trainers = trainersForZone(map.zoneId);
+  const stage = getStage(map.zoneId);
+  const zoneBiome = stage?.biomes[0] ?? "grass";
+
+  function toggleDrawer(open: boolean) {
+    setDrawerOpen(open);
+    Animated.spring(drawerAnim, { toValue: open ? 1 : 0, useNativeDriver: false, friction: 8 }).start();
+  }
 
   const cameraX = cameraOffset(anim.x, mapPixelWidth, viewportWidth);
   const cameraY = cameraOffset(anim.y, mapPixelHeight, viewportHeight);
@@ -101,7 +126,32 @@ export function MapScreen({ navigation, route }: Props) {
       return;
     }
 
+    // A trainer standing in the road stops you where you are and challenges, rather than
+    // letting you walk through them.
+    const blocker = trainerAt(map.zoneId, next.row, next.col);
+    if (blocker && !defeatedTrainerIds.includes(blocker.id)) {
+      setMessage(blocker.intro);
+      setBusy(true);
+      const flashes = ENCOUNTER_FLASH_SEQUENCE.map((toValue) =>
+        Animated.timing(encounterFlash, { toValue, duration: ENCOUNTER_FLASH_STEP_MS, useNativeDriver: false })
+      );
+      Animated.sequence(flashes).start(() => {
+        encounterFlash.setValue(0);
+        setBusy(false);
+        // The biome only picks the backdrop here; a trainer fight isn't tied to terrain, so
+        // use the zone's own primary biome.
+        navigation.navigate("Battle", { biome: zoneBiome, trainerId: blocker.id });
+      });
+      return;
+    }
+
     setMessage(null);
+    // Follower steps into the tile being vacated, one beat behind the player.
+    Animated.timing(followerAnim, {
+      toValue: { x: position.col * TILE_SIZE, y: position.row * TILE_SIZE },
+      duration: 150,
+      useNativeDriver: false,
+    }).start();
     setPosition(next);
     setBusy(true);
     Animated.timing(anim, {
@@ -110,6 +160,12 @@ export function MapScreen({ navigation, route }: Props) {
       useNativeDriver: false, // animating a plain View position, not a native-driver-eligible property
     }).start(() => {
       if (isExitTile(map, next.row, next.col) && map.exitTo) {
+        const gate = medalRequiredToEnter(map.exitTo);
+        if (gate && !medals.includes(gate.medalId)) {
+          setMessage(`The way on is barred. Earn the ${gate.medalName} from ${gate.leaderName} first.`);
+          setBusy(false);
+          return;
+        }
         setCurrentZone(map.exitTo);
         // reset (not push): Map is the app's default/root screen, so moving
         // to a new zone replaces the stack's root with a fresh Map instance
@@ -133,9 +189,16 @@ export function MapScreen({ navigation, route }: Props) {
         const healedCount = healFaintedPartyMembers();
         setMessage(
           healedCount > 0
-            ? `The Healing Center revived ${healedCount} fainted creature${healedCount === 1 ? "" : "s"}!`
-            : "Nobody in your party needs reviving right now."
+            ? `The chapel restores your party — ${healedCount} creature${healedCount === 1 ? "" : "s"} back to full.`
+            : "Your party is already rested."
         );
+        if (healedCount > 0) {
+          // A green wash over the scene so healing registers as an event, not a line of text.
+          Animated.sequence([
+            Animated.timing(healGlow, { toValue: 1, duration: 260, useNativeDriver: false }),
+            Animated.timing(healGlow, { toValue: 0, duration: 520, useNativeDriver: false }),
+          ]).start();
+        }
         setBusy(false);
         return;
       }
@@ -173,10 +236,8 @@ export function MapScreen({ navigation, route }: Props) {
     <ScreenBackground style={styles.container}>
       <Text style={styles.title}>{map.zoneName}</Text>
       <Text style={styles.subtitle}>
-        Walk into Grass, Rock, Water, or Sand tiles — wild creatures lurk there, nowhere else. The
-        Healing Center (✚) revives any fainted party members, and walking back onto the entrance
-        tile returns to the previous zone.
-        {map.exitTo ? " The lit path leads onward." : " This is as far as the path goes for now."}
+        Stage {stage?.stage ?? 1} of {TOTAL_STAGES} · wild creatures lurk in the tall grass, rock,
+        water and sand. The chapel restores your party; trainers on the road must be beaten to pass.
       </Text>
 
       <View style={[styles.gridWrap, { width: viewportWidth, height: viewportHeight }]}>
@@ -199,6 +260,37 @@ export function MapScreen({ navigation, route }: Props) {
               ))}
             </View>
           ))}
+          {trainers.map((trainer) => (
+            <View
+              key={trainer.id}
+              testID={`trainer-${trainer.id}`}
+              style={[
+                styles.entity,
+                { left: trainer.position.col * TILE_SIZE, top: trainer.position.row * TILE_SIZE },
+              ]}
+            >
+              <TrainerSprite
+                size={TILE_SIZE}
+                isGymLeader={trainer.isGymLeader}
+                defeated={defeatedTrainerIds.includes(trainer.id)}
+              />
+            </View>
+          ))}
+
+          {leadCreature && (
+            <Animated.View
+              testID="follower-creature"
+              pointerEvents="none"
+              style={[styles.follower, { transform: followerAnim.getTranslateTransform() }]}
+            >
+              <CreatureAvatar
+                speciesId={leadCreature.speciesId}
+                types={leadCreature.types}
+                size={TILE_SIZE * 0.72}
+              />
+            </Animated.View>
+          )}
+
           <Animated.View testID="player-avatar" style={[styles.avatar, { transform: anim.getTranslateTransform() }]}>
             <PlayerSprite facing={facing} size={TILE_SIZE} />
           </Animated.View>
@@ -208,10 +300,61 @@ export function MapScreen({ navigation, route }: Props) {
           pointerEvents="none"
           style={[styles.encounterFlash, { opacity: encounterFlash }]}
         />
+        <Animated.View
+          testID="heal-glow"
+          pointerEvents="none"
+          style={[styles.healGlow, { opacity: healGlow }]}
+        />
+
+        {/* Hidden side menu: a slim tab on the edge that slides a panel out, so the map's
+            controls can't be hit by accident while walking. */}
+        <Animated.View
+          style={[
+            styles.drawer,
+            {
+              transform: [
+                { translateX: drawerAnim.interpolate({ inputRange: [0, 1], outputRange: [DRAWER_WIDTH, 0] }) },
+              ],
+            },
+          ]}
+        >
+          {[
+            { label: "Party", testID: "drawer-party", go: () => navigation.navigate("Party") },
+            { label: "Bag", testID: "drawer-bag", go: () => navigation.navigate("Bag") },
+            { label: "Codex", testID: "drawer-codex", go: () => navigation.navigate("Codex") },
+            { label: "Shop", testID: "drawer-shop", go: () => navigation.navigate("Shop") },
+            { label: "Menu", testID: "menu-button", go: () => navigation.navigate("Home") },
+          ].map((entry) => (
+            <Pressable
+              key={entry.label}
+              testID={entry.testID}
+              onPress={() => {
+                toggleDrawer(false);
+                entry.go();
+              }}
+              style={({ pressed }) => [styles.drawerItem, pressed && styles.drawerItemPressed]}
+            >
+              <Text style={styles.drawerItemText}>{entry.label}</Text>
+            </Pressable>
+          ))}
+        </Animated.View>
+
+        <Pressable
+          testID="drawer-tab"
+          onPress={() => toggleDrawer(!drawerOpen)}
+          style={({ pressed }) => [styles.drawerTab, pressed && styles.drawerTabPressed]}
+        >
+          <Text style={styles.drawerTabGlyph}>{drawerOpen ? "›" : "‹"}</Text>
+        </Pressable>
       </View>
 
       <Text style={styles.message}>{message ?? " "}</Text>
 
+      {controlMode === "joystick" ? (
+        <View style={styles.joystickWrap}>
+          <Joystick onStep={move} disabled={busy} />
+        </View>
+      ) : (
       <View style={styles.dpad}>
         <Pressable testID="move-up" onPress={() => move("up")} style={styles.dpadButton}>
           <Text style={styles.dpadGlyph}>▲</Text>
@@ -229,10 +372,19 @@ export function MapScreen({ navigation, route }: Props) {
           <Text style={styles.dpadGlyph}>▼</Text>
         </Pressable>
       </View>
+      )}
 
-      <HoverTip text="Open the Home menu for Party, Codex, Bag, and Shop. Keyboard: arrows to move, B for Bag, P for Party, M for this menu.">
-        <PrimaryButton testID="menu-button" label="Menu" variant="secondary" onPress={() => navigation.navigate("Home")} />
-      </HoverTip>
+      <Pressable
+        testID="toggle-control-mode"
+        onPress={() => setControlMode(controlMode === "joystick" ? "dpad" : "joystick")}
+        style={({ pressed }) => [styles.controlToggle, pressed && styles.drawerItemPressed]}
+      >
+        <Text style={styles.controlToggleText}>
+          {controlMode === "joystick" ? "Switch to D-pad" : "Switch to joystick"}
+        </Text>
+      </Pressable>
+
+
     </ScreenBackground>
   );
 }
@@ -341,6 +493,103 @@ const styles = StyleSheet.create({
   dpadSpacer: {
     width: 52,
     height: 52,
+  },
+  healGlow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#7ddba0",
+  },
+  /** Anything standing on the map — trainers, the follower — is absolutely placed in grid space. */
+  entity: {
+    position: "absolute",
+    width: TILE_SIZE,
+    height: TILE_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  follower: {
+    position: "absolute",
+    width: TILE_SIZE,
+    height: TILE_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  drawer: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: DRAWER_WIDTH,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    borderLeftWidth: 2,
+    borderLeftColor: colors.border,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    gap: 6,
+    justifyContent: "center",
+  },
+  drawerItem: {
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  drawerItemPressed: {
+    backgroundColor: colors.accent,
+    transform: [{ scale: 0.97 }],
+  },
+  drawerItemText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  /** Deliberately small and hard against the edge: easy to find, hard to hit while walking. */
+  drawerTab: {
+    position: "absolute",
+    right: 0,
+    top: "42%",
+    width: 22,
+    height: 54,
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderWidth: 1,
+    borderRightWidth: 0,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  drawerTabPressed: {
+    backgroundColor: colors.accent,
+  },
+  drawerTabGlyph: {
+    color: colors.textMuted,
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  joystickWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 4,
+  },
+  controlToggle: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  controlToggleText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
   },
   dpadGlyph: {
     fontSize: 20,
