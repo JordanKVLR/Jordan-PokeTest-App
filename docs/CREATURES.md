@@ -1,4 +1,4 @@
-# Creature Roster — Chivalry & Antiquity
+# Creature Roster — A Maltese Tale
 
 **106 species.** Generated from `src/data/*.json` and from the live encounter tables,
 so the availability column is what the game actually rolls, not an estimate. The rules below

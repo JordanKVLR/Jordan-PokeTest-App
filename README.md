@@ -2,7 +2,7 @@
 
 Experimental game development with Claude Code.
 
-## Chivalry & Antiquity (Project Melita)
+## A Maltese Tale (Project Melita)
 
 A turn-based creature-collector set in the original archipelago region of
 Melita. Full design spec: [`docs/GAME_SPEC.md`](docs/GAME_SPEC.md).
@@ -33,7 +33,7 @@ App.tsx                Expo entry point, renders the navigator
 
 ### Screens implemented
 
-Title ("Chivalry & Antiquity") -> New Game -> Name Entry -> Region Select ->
+Title ("A Maltese Tale") -> New Game -> Name Entry -> Region Select ->
 Starter Quiz -> Starter Reveal -> **Map** (the default/root screen from then
 on), with Home (party HUD + quick links), Battle View, Party, Codex, Bag,
 Shop, and Help all reachable from Map/Home, matching spec 4.1.

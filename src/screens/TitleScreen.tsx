@@ -5,6 +5,7 @@ import { useGameStore } from "../state/gameStore";
 import { PrimaryButton } from "./components/PrimaryButton";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { colors } from "./theme";
+import { TitleLandscape } from "../art/titleLandscape";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Title">;
 
@@ -25,12 +26,13 @@ export function TitleScreen({ navigation }: Props) {
 
   return (
     <ScreenBackground style={styles.container}>
+      <TitleLandscape />
       <View style={styles.crest}>
         <Text style={styles.crestGlyph}>✛</Text>
       </View>
       <View style={styles.titleBlock}>
-        <Text style={styles.title}>Chivalry & Antiquity</Text>
-        <Text style={styles.subtitle}>Project Melita</Text>
+        <Text style={styles.title}>A Maltese Tale</Text>
+        <Text style={styles.subtitle}>Catch what the islands left behind</Text>
       </View>
 
       <View style={styles.actions}>
@@ -63,6 +65,9 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     borderWidth: 2,
     borderColor: colors.accent,
+    // The landscape behind this screen is bright and busy, so everything that carries text sits
+    // on its own light panel rather than trusting the sky to stay out of the way.
+    backgroundColor: "rgba(255,255,255,0.82)",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 24,
@@ -73,6 +78,12 @@ const styles = StyleSheet.create({
   },
   titleBlock: {
     alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.86)",
+    borderRadius: 18,
+    paddingVertical: 18,
+    paddingHorizontal: 26,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.9)",
   },
   title: {
     color: colors.text,
@@ -91,9 +102,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   hint: {
-    color: colors.textMuted,
+    color: colors.text,
     fontSize: 12,
     textAlign: "center",
     marginTop: 4,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    overflow: "hidden",
   },
 });

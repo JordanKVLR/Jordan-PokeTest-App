@@ -5,6 +5,7 @@ import { PrimaryButton } from "./components/PrimaryButton";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { colors } from "./theme";
+import { TypeChartTable } from "./components/TypeChartTable";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Help">;
 
@@ -81,7 +82,7 @@ export function HelpScreen({ navigation }: Props) {
   return (
     <ScreenBackground style={styles.container}>
       <Text style={styles.title}>Help</Text>
-      <Text style={styles.subtitle}>Everything you need to know about Chivalry & Antiquity.</Text>
+      <Text style={styles.subtitle}>Everything you need to know about A Maltese Tale.</Text>
 
       <ScrollView contentContainerStyle={styles.list}>
         {SECTIONS.map((section) => (
@@ -90,6 +91,17 @@ export function HelpScreen({ navigation }: Props) {
             <Text style={styles.sectionBody}>{section.body}</Text>
           </View>
         ))}
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Type chart</Text>
+          <Text style={styles.sectionBody}>
+            Every type beats something and loses to something else. Tap a type to see both sides:
+            what its own attacks do, and what lands hardest on a creature carrying it. A
+            dual-typed creature multiplies the two — which is how a hit can land for 4x, or for
+            nothing at all.
+          </Text>
+        </View>
+        <TypeChartTable />
       </ScrollView>
 
       <PrimaryButton testID="back-button" label="Back" variant="secondary" onPress={() => navigation.goBack()} />

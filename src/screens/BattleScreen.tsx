@@ -39,6 +39,7 @@ import { EvolutionModal, type EvolutionRevealData } from "./components/Evolution
 import { MoveLearnModal, type MoveLearnPrompt } from "./components/MoveLearnModal";
 import { BlackoutOverlay } from "./components/BlackoutOverlay";
 import { VictoryOverlay } from "./components/VictoryOverlay";
+import { ElementalTransition } from "./components/ElementalTransition";
 import { getMap, findTilePosition } from "../game/mapData";
 import { getZoneName } from "../game/zones";
 import { colors } from "./theme";
@@ -173,10 +174,19 @@ export function BattleScreen({ navigation, route }: Props) {
   const fsm = fsmRef.current;
 
   const [snapshot, setSnapshot] = useState<BattleSnapshot | null>(() => (fsm ? snapshotFrom(fsm.getContext()) : null));
+  // One of the trainer's lines, chosen as the battle opens so a rematch does not replay it.
+  const [boast] = useState<string | null>(() => {
+    if (!trainer?.boasts?.length) return null;
+    return trainer.boasts[Math.floor(Math.random() * trainer.boasts.length)];
+  });
+  // Trainer fights open on an elemental wipe carrying that line; wild encounters start straight
+  // away, because the grass has nothing to say.
+  const [intro, setIntro] = useState(() => Boolean(trainer));
   const [log, setLog] = useState<string[]>(() =>
     route.params.trainerId
       ? [
           getTrainer(route.params.trainerId)?.intro ?? "A challenger appears!",
+          ...(boast ? [`${trainer?.name ?? "They"}: "${boast}"`] : []),
           `They send out ${enemyTeam[0]?.displayName ?? "a creature"}!`,
         ]
       : [`A wild ${enemy.displayName} appeared!`]
@@ -1009,6 +1019,15 @@ export function BattleScreen({ navigation, route }: Props) {
             pushLog([`${movePrompts[0].displayName} did not learn ${getMove(movePrompts[0].newMoveId).name}.`]);
             setMovePrompts((prev) => prev.slice(1));
           }}
+        />
+      )}
+
+      {intro && trainer && (
+        <ElementalTransition
+          type={trainer.signatureType}
+          trainerName={`${trainer.title} ${trainer.name}`}
+          line={boast ?? "Let's see what you've got."}
+          onDone={() => setIntro(false)}
         />
       )}
 
