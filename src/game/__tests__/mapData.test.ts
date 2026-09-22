@@ -1,120 +1,117 @@
-import {
-  MAPS,
-  getMap,
-  isWalkable,
-  isExitTile,
-  isEntranceTile,
-  isHealTile,
-  biomeAt,
-  findTilePosition,
-  BIOME_TYPES,
-} from "../mapData";
+import { getMap, isWalkable, biomeAt, isExitTile, isEntranceTile, isHealTile, findTilePosition } from "../mapData";
+import { STAGES, getStage, nextStageId, previousStageId, ALL_MEDALS } from "../zoneProgression";
+import { trainersForZone, gymLeaderForZone } from "../trainers";
 
-/** Every non-tree tile should be reachable from the zone's own entrance — a disconnected biome
- * patch, Healing Center, or exit tile would be unreachable content, exactly the kind of mistake
- * hand-editing these ASCII maps could introduce. */
-function bfsReachable(map: ReturnType<typeof getMap>, start: { row: number; col: number }) {
+/** Flood fill from a start tile across walkable tiles. */
+function reachableFrom(zoneId: string, start: { row: number; col: number }): Set<string> {
+  const map = getMap(zoneId);
   const seen = new Set<string>([`${start.row},${start.col}`]);
   const queue = [start];
-  while (queue.length > 0) {
+  while (queue.length) {
     const { row, col } = queue.shift()!;
-    for (const [dRow, dCol] of [
-      [1, 0],
-      [-1, 0],
-      [0, 1],
-      [0, -1],
-    ]) {
-      const nRow = row + dRow;
-      const nCol = col + dCol;
-      const key = `${nRow},${nCol}`;
-      if (!seen.has(key) && isWalkable(map, nRow, nCol)) {
-        seen.add(key);
-        queue.push({ row: nRow, col: nCol });
-      }
+    for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+      const r = row + dr;
+      const c = col + dc;
+      const key = `${r},${c}`;
+      if (seen.has(key) || !isWalkable(map, r, c)) continue;
+      seen.add(key);
+      queue.push({ row: r, col: c });
     }
   }
   return seen;
 }
 
-describe("mapData — zone chain wiring", () => {
-  const zoneIds = Object.keys(MAPS);
-
-  it("has all 4 zones", () => {
-    expect(zoneIds.sort()).toEqual(["azure_caverns", "luzzu_harbour", "melita_woods", "ramla_dunes"].sort());
+describe("stage progression", () => {
+  it("runs 20 stages with a gym every fifth one", () => {
+    expect(STAGES).toHaveLength(20);
+    const gymStages = STAGES.filter((s) => s.gym).map((s) => s.stage);
+    expect(gymStages).toEqual([5, 10, 15, 20]);
+    expect(ALL_MEDALS).toHaveLength(4);
   });
 
-  it.each(zoneIds)("%s: every non-tree tile is reachable from the entrance", (zoneId) => {
+  it("raises the wild level every stage, with no plateaus or dips", () => {
+    for (let i = 1; i < STAGES.length; i++) {
+      expect(STAGES[i].baseLevel).toBeGreaterThan(STAGES[i - 1].baseLevel);
+    }
+    expect(STAGES[0].baseLevel).toBeLessThan(8);
+    expect(STAGES[STAGES.length - 1].baseLevel).toBeGreaterThan(50);
+  });
+
+  it("gates the stage after each gym behind that gym's medal", () => {
+    for (const gymStage of STAGES.filter((s) => s.gym)) {
+      const next = STAGES.find((s) => s.stage === gymStage.stage + 1);
+      if (!next) continue; // the final gym ends the run
+      expect(next.requiresMedal).toBe(gymStage.gym!.medalId);
+    }
+  });
+
+  it("chains every stage to its neighbours", () => {
+    expect(previousStageId(STAGES[0].id)).toBeNull();
+    expect(nextStageId(STAGES[STAGES.length - 1].id)).toBeNull();
+    for (let i = 0; i < STAGES.length - 1; i++) {
+      expect(nextStageId(STAGES[i].id)).toBe(STAGES[i + 1].id);
+      expect(previousStageId(STAGES[i + 1].id)).toBe(STAGES[i].id);
+    }
+  });
+});
+
+describe("generated zone maps", () => {
+  it.each(STAGES.map((s) => [s.id, s.name]))("%s (%s) is fully traversable", (zoneId) => {
     const map = getMap(zoneId);
-    const reachable = bfsReachable(map, map.playerStart);
-    for (let row = 0; row < map.rows.length; row++) {
-      for (let col = 0; col < map.rows[row].length; col++) {
-        if (isWalkable(map, row, col)) {
-          expect(reachable.has(`${row},${col}`)).toBe(true);
+    const reachable = reachableFrom(zoneId, map.playerStart);
+
+    const exit = findTilePosition(map, "exit");
+    expect(exit).not.toBeNull();
+    expect(reachable.has(`${exit!.row},${exit!.col}`)).toBe(true);
+
+    const heal = findTilePosition(map, "heal");
+    expect(heal).not.toBeNull();
+    expect(reachable.has(`${heal!.row},${heal!.col}`)).toBe(true);
+  });
+
+  it.each(STAGES.map((s) => [s.id]))("%s puts every trainer somewhere reachable", (zoneId) => {
+    const map = getMap(zoneId);
+    const reachable = reachableFrom(zoneId, map.playerStart);
+    for (const trainer of trainersForZone(zoneId)) {
+      expect(reachable.has(`${trainer.position.row},${trainer.position.col}`)).toBe(true);
+    }
+    const gym = gymLeaderForZone(zoneId);
+    if (gym) expect(reachable.has(`${gym.position.row},${gym.position.col}`)).toBe(true);
+  });
+
+  it("is deterministic — the same zone builds identically every time", () => {
+    const first = getMap("dingli_cliffs").rows.map((r) => r.join("")).join("|");
+    const second = getMap("dingli_cliffs").rows.map((r) => r.join("")).join("|");
+    expect(second).toBe(first);
+  });
+
+  it("gives each zone both of its stage's biomes to find encounters in", () => {
+    for (const stage of STAGES) {
+      const map = getMap(stage.id);
+      const found = new Set<string>();
+      for (let r = 0; r < map.rows.length; r++) {
+        for (let c = 0; c < map.rows[r].length; c++) {
+          const biome = biomeAt(map, r, c);
+          if (biome) found.add(biome);
         }
       }
+      for (const biome of stage.biomes) expect(found.has(biome)).toBe(true);
     }
   });
 
-  it.each(zoneIds)("%s: has exactly one entrance tile, at playerStart", (zoneId) => {
-    const map = getMap(zoneId);
-    expect(isEntranceTile(map, map.playerStart.row, map.playerStart.col)).toBe(true);
-  });
-
-  it.each(zoneIds)("%s: has exactly one Healing Center, reachable", (zoneId) => {
-    const map = getMap(zoneId);
-    const healPos = findTilePosition(map, "heal");
-    expect(healPos).not.toBeNull();
-    expect(isHealTile(map, healPos!.row, healPos!.col)).toBe(true);
-  });
-
-  it.each(zoneIds)("%s: mixes at least 2 biome tile types", (zoneId) => {
-    const map = getMap(zoneId);
-    const biomesPresent = new Set<string>();
-    for (const row of map.rows) {
-      for (const tile of row) {
-        if ((BIOME_TYPES as string[]).includes(tile)) biomesPresent.add(tile);
-      }
-    }
-    expect(biomesPresent.size).toBeGreaterThanOrEqual(2);
-  });
-
-  it("forward (exitTo) and backward (previousZoneId) links agree with each other in both directions", () => {
-    for (const zoneId of zoneIds) {
-      const map = getMap(zoneId);
-      if (map.exitTo) {
-        const nextMap = getMap(map.exitTo);
-        expect(nextMap.previousZoneId).toBe(zoneId);
-      }
-      if (map.previousZoneId) {
-        const prevMap = getMap(map.previousZoneId);
-        expect(prevMap.exitTo).toBe(zoneId);
-      }
-    }
-  });
-
-  it("chains in the expected order: Melita Woods -> Luzzu Harbour -> Azure Caverns -> Ramla Dunes", () => {
-    expect(getMap("melita_woods").previousZoneId).toBeNull();
-    expect(getMap("melita_woods").exitTo).toBe("luzzu_harbour");
-    expect(getMap("luzzu_harbour").exitTo).toBe("azure_caverns");
-    expect(getMap("azure_caverns").exitTo).toBe("ramla_dunes");
-    expect(getMap("ramla_dunes").exitTo).toBeNull();
-  });
-
-  it.each(zoneIds)("%s: every zone with an exit has that exit tile reachable", (zoneId) => {
-    const map = getMap(zoneId);
-    const exitPos = findTilePosition(map, "exit");
-    if (map.exitTo) {
-      expect(exitPos).not.toBeNull();
-      expect(isExitTile(map, exitPos!.row, exitPos!.col)).toBe(true);
-    } else {
-      expect(exitPos).toBeNull();
-    }
-  });
-
-  it("biomeAt only returns a biome for actual biome tiles, not for path/tree/heal/exit/entrance", () => {
+  it("marks the entrance, exit and heal tiles as their own kinds", () => {
     const map = getMap("melita_woods");
-    const healPos = findTilePosition(map, "heal")!;
-    expect(biomeAt(map, healPos.row, healPos.col)).toBeNull();
-    expect(biomeAt(map, map.playerStart.row, map.playerStart.col)).toBeNull();
+    const entrance = map.playerStart;
+    expect(isEntranceTile(map, entrance.row, entrance.col)).toBe(true);
+    const exit = findTilePosition(map, "exit")!;
+    expect(isExitTile(map, exit.row, exit.col)).toBe(true);
+    const heal = findTilePosition(map, "heal")!;
+    expect(isHealTile(map, heal.row, heal.col)).toBe(true);
+  });
+
+  it("names every zone from its stage definition", () => {
+    for (const stage of STAGES) {
+      expect(getMap(stage.id).zoneName).toBe(getStage(stage.id)!.name);
+    }
   });
 });

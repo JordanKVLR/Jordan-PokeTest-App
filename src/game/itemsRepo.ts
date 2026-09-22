@@ -37,6 +37,13 @@ export function usableItems(): ItemData[] {
   return ITEMS.filter((item) => item.effect !== undefined);
 }
 
+/** Every trap in the game, strongest first — the battle screen lets the player pick. */
+export function ballItems(): ItemData[] {
+  return ITEMS.filter((item) => item.category === "balls").sort(
+    (a, b) => (b.catchMultiplier ?? 0) - (a.catchMultiplier ?? 0)
+  );
+}
+
 /** Highest catch-multiplier ball the player currently has at least one of. */
 const BALL_PRIORITY = ["melitan_ball", "festa_trap", "greca_trap"];
 

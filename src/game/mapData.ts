@@ -1,3 +1,6 @@
+import { generateZoneMap } from "./mapGenerator";
+import { getStage, nextStageId, previousStageId } from "./zoneProgression";
+
 /** The four terrain types that can trigger a wild encounter — each zone mixes at least two of
  * these, and each biome draws from its own themed wild-creature pool (see encounterTable.ts). */
 export type BiomeType = "grass" | "rock" | "water" | "sand";
@@ -17,139 +20,33 @@ export interface TileMap {
   previousZoneId: string | null;
 }
 
-const LEGEND: Record<string, TileType> = {
-  T: "tree",
-  ".": "path",
-  G: "grass",
-  R: "rock",
-  W: "water",
-  S: "sand",
-  P: "entrance", // player start tile — walking back onto it returns to the previous zone
-  E: "exit",
-  H: "heal", // Healing Center — walkable, fully revives KO'd party members on entry
-};
+/**
+ * The 20-stage run is generated from zoneProgression.ts rather than hand-drawn: see
+ * mapGenerator.ts for the shape and why it is deterministic. Maps are built once, lazily, and
+ * cached, so repeated visits to a zone get the identical grid.
+ */
+const mapCache = new Map<string, TileMap>();
 
-function parseMap(
-  raw: string[],
-  zoneId: string,
-  zoneName: string,
-  exitTo: string | null,
-  previousZoneId: string | null
-): TileMap {
-  const width = raw[0]?.length ?? 0;
-  for (const rowStr of raw) {
-    if (rowStr.length !== width) {
-      throw new Error(`Map "${zoneId}": all rows must be the same length (expected ${width}, got ${rowStr.length})`);
-    }
-  }
-  let playerStart = { row: 0, col: 0 };
-  const rows: TileType[][] = raw.map((rowStr, rowIndex) =>
-    rowStr.split("").map((ch, colIndex) => {
-      if (ch === "P") playerStart = { row: rowIndex, col: colIndex };
-      const tile = LEGEND[ch];
-      if (!tile) throw new Error(`Unknown map legend character: "${ch}"`);
-      return tile;
-    })
-  );
-  return { zoneId, zoneName, rows, playerStart, exitTo, previousZoneId };
+function buildMap(zoneId: string): TileMap {
+  const stage = getStage(zoneId);
+  if (!stage) throw new Error(`Unknown zone: ${zoneId}`);
+  const generated = generateZoneMap(stage);
+  return {
+    zoneId,
+    zoneName: stage.name,
+    rows: generated.rows,
+    playerStart: generated.playerStart,
+    exitTo: nextStageId(zoneId),
+    previousZoneId: previousStageId(zoneId),
+  };
 }
 
-/**
- * Four hand-authored zones chained in a line (spec: "each map has one exit and one entrance"),
- * not the full node-graph-of-many-zones world from section 2.1 — just enough to demonstrate
- * walking from a weaker zone into progressively stronger ones. Each zone mixes at least two
- * biome tile types (see BiomeType above), each with its own themed wild-encounter pool
- * (encounterTable.ts) rather than one shared pool for the whole game.
- *
- * Each zone is a distinct irregular shape/size (not a uniform square) — trees carve the outer
- * silhouette as well as blocking movement, so the walkable footprint itself reads as an organic
- * blob, a pier, a winding cave, or a dune atoll rather than a plain rectangle. All rows in a
- * given raw array must still be equal length (a rectangular char grid), but the walkable area
- * inside it doesn't have to be. Connectivity from the entrance to every biome tile, the Healing
- * Center, and the exit (where one exists) was verified with a throwaway BFS script, not asserted
- * at runtime.
- */
-const MELITA_WOODS_RAW = [
-  "TTTTTTTTTTTTTTT",
-  "TTTTTTT.TTTTTTT",
-  "TTTTTT...TTTTTT",
-  "TTTTT..R..TTTTT",
-  "TTTT..RRR..TTTT",
-  "TTT..RRGRR..TTT",
-  "TT..RRGGGRR..TT",
-  "TPHRRGGGGGRR.ET",
-  "TT..RRGGGRR..TT",
-  "TTT..RRGRR..TTT",
-  "TTTT..RRR..TTTT",
-  "TTTTT..R..TTTTT",
-  "TTTTTT...TTTTTT",
-  "TTTTTTT.TTTTTTT",
-  "TTTTTTTTTTTTTTT",
-];
-
-const LUZZU_HARBOUR_RAW = [
-  "TTTTTTTTTTTTTTTTTTTTT",
-  "T..........TTTTTTTTTT",
-  "T..........TTTTTTTTTT",
-  "T..WWWSS...TTTTTTTTTT",
-  "T..WWWSS...TTTTTTTTTT",
-  "TPHWWWSS............E",
-  "T..WWWSS...TTTTTTTTTT",
-  "T..WWWSS...TTTTTTTTTT",
-  "T..........TTTTTTTTTT",
-  "T..........TTTTTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTT",
-];
-
-const AZURE_CAVERNS_RAW = [
-  "TTTTTTTTTTTTT",
-  "THP.TTTTTTTTT",
-  "TRR.TTTTTTTTT",
-  "T.....W.TTTTT",
-  "TTTTT...TTTTT",
-  "TTTTT.R.TTTTT",
-  "TTTTT.R.TTTTT",
-  "TTT.....TTTTT",
-  "TTT.W.TTTTTTT",
-  "TTT.W.TTTTTTT",
-  "TTT.W.TTTTTTT",
-  "TTT...R.R.TTT",
-  "TTTTTTT.W.TTT",
-  "TTTTTTT.W.TTT",
-  "TTTTTTT.W.TTT",
-  "TTT.......TTT",
-  "TTTRR.TTTTTTT",
-  "TTT.E.TTTTTTT",
-  "TTTTTTTTTTTTT",
-];
-
-const RAMLA_DUNES_RAW = [
-  "TTTTTTTTTTTTTTTTTTTTT",
-  "TTTTTTT...S...TTTTTTT",
-  "TTTT.SSSSSSGGGGG.TTTT",
-  "TT.SSSSSSSSGGGGGGG.TT",
-  "T.SSSSSSSSSGGGGGGGG.T",
-  "T.SSSSSSSSSGGGGGGGG.T",
-  "TPHSSSSSSSSGGGGGGGGGT",
-  "T.SSSSSSSSSGGGGGGGG.T",
-  "T.SSSSSSSSSGGGGGGGG.T",
-  "TT.SSSSSSSSGGGGGGG.TT",
-  "TTTT.SSSSSSGGGGG.TTTT",
-  "TTTTTTT...S...TTTTTTT",
-  "TTTTTTTTTTTTTTTTTTTTT",
-];
-
-export const MAPS: Record<string, TileMap> = {
-  melita_woods: parseMap(MELITA_WOODS_RAW, "melita_woods", "Melita Woods", "luzzu_harbour", null),
-  luzzu_harbour: parseMap(LUZZU_HARBOUR_RAW, "luzzu_harbour", "Luzzu Harbour", "azure_caverns", "melita_woods"),
-  azure_caverns: parseMap(AZURE_CAVERNS_RAW, "azure_caverns", "Azure Caverns", "ramla_dunes", "luzzu_harbour"),
-  ramla_dunes: parseMap(RAMLA_DUNES_RAW, "ramla_dunes", "Ramla Dunes", null, "azure_caverns"),
-};
-
 export function getMap(zoneId: string): TileMap {
-  const map = MAPS[zoneId];
-  if (!map) throw new Error(`Unknown zone id: "${zoneId}"`);
-  return map;
+  const cached = mapCache.get(zoneId);
+  if (cached) return cached;
+  const built = buildMap(zoneId);
+  mapCache.set(zoneId, built);
+  return built;
 }
 
 export function tileAt(map: TileMap, row: number, col: number): TileType | undefined {

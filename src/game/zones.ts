@@ -1,4 +1,5 @@
 import { getMap } from "./mapData";
+import { getStage, STAGES } from "./zoneProgression";
 
 export interface ZoneEncounterSettings {
   baseLevel: number;
@@ -8,18 +9,21 @@ export interface ZoneEncounterSettings {
   legendaryMinLevel: number;
 }
 
-/** The further along the chain a zone is, the higher its wild-level range. */
-const ZONE_ENCOUNTER_SETTINGS: Record<string, ZoneEncounterSettings> = {
-  melita_woods: { baseLevel: 4, levelSpread: 2, legendaryMinLevel: 25 },
-  luzzu_harbour: { baseLevel: 10, levelSpread: 3, legendaryMinLevel: 32 },
-  azure_caverns: { baseLevel: 17, levelSpread: 3, legendaryMinLevel: 40 },
-  ramla_dunes: { baseLevel: 24, levelSpread: 4, legendaryMinLevel: 48 },
+const DEFAULT_SETTINGS: ZoneEncounterSettings = {
+  baseLevel: STAGES[0].baseLevel,
+  levelSpread: STAGES[0].levelSpread,
+  legendaryMinLevel: STAGES[0].legendaryMinLevel,
 };
 
-const DEFAULT_SETTINGS: ZoneEncounterSettings = { baseLevel: 4, levelSpread: 2, legendaryMinLevel: 25 };
-
+/** Encounter difficulty comes straight off the stage table, so the curve is defined in one place. */
 export function getZoneEncounterSettings(zoneId: string): ZoneEncounterSettings {
-  return ZONE_ENCOUNTER_SETTINGS[zoneId] ?? DEFAULT_SETTINGS;
+  const stage = getStage(zoneId);
+  if (!stage) return DEFAULT_SETTINGS;
+  return {
+    baseLevel: stage.baseLevel,
+    levelSpread: stage.levelSpread,
+    legendaryMinLevel: stage.legendaryMinLevel,
+  };
 }
 
 export function getZoneName(zoneId: string): string {

@@ -17,7 +17,8 @@ import {
 } from "../game/party";
 import { xpRewardForLevel, currencyRewardForLevel } from "../game/progression";
 import { getMove, LAST_RESORT_MOVE_ID } from "../game/movesRepo";
-import { pickBestAvailableBall, getItem, usableItems } from "../game/itemsRepo";
+import { ballItems, getItem, usableItems } from "../game/itemsRepo";
+import type { ItemData } from "../data/schemas";
 import { BattleStateMachine, type Winner, type ActionOutcome } from "../engine/battleManager";
 import { attemptCatch, type ContainerType } from "../engine/catching";
 import { isCruxOnCooldown, CRUX_AURA_STATUS_ID } from "../engine/cruxAura";
@@ -142,6 +143,7 @@ export function BattleScreen({ navigation, route }: Props) {
   const [rewards, setRewards] = useState<BattleRewards | null>(null);
   const [showParty, setShowParty] = useState(false);
   const [showItems, setShowItems] = useState(false);
+  const [showTraps, setShowTraps] = useState(false);
   const [forcedSwitchPending, setForcedSwitchPending] = useState(false);
   const [resolving, setResolving] = useState(false);
   const [levelUpReveal, setLevelUpReveal] = useState<LevelUpRevealData | null>(null);
@@ -508,10 +510,14 @@ export function BattleScreen({ navigation, route }: Props) {
     }
   }
 
-  const availableBall = pickBestAvailableBall(inventory);
+  /** Every trap the player actually owns, best first — the chooser lists all of them. */
+  const ownedTraps = ballItems().filter((item) => (inventory[item.id] ?? 0) > 0);
+  const hasTraps = ownedTraps.length > 0;
 
-  function handleCatch() {
-    if (!fsm || outcome || forcedSwitchPending || resolving || fsm.getState() !== "ACTION_SELECT" || !availableBall) return;
+  function handleCatch(trap: ItemData) {
+    if (!fsm || outcome || forcedSwitchPending || resolving || fsm.getState() !== "ACTION_SELECT") return;
+    if ((inventory[trap.id] ?? 0) <= 0) return;
+    setShowTraps(false);
     const ctx = fsm.getContext();
     const enemyCreature = ctx.enemyActive;
 
@@ -519,10 +525,11 @@ export function BattleScreen({ navigation, route }: Props) {
       maxHp: enemyCreature.stats.hp,
       currentHp: enemyCreature.currentHp,
       baseCatchRate: WILD_BASE_CATCH_RATE,
-      container: availableBall.id as ContainerType,
+      container: trap.id as ContainerType,
       status: enemyCreature.status,
     });
-    consumeItem(availableBall.id);
+    consumeItem(trap.id);
+    const availableBall = trap;
     setResolving(true);
     stageRef.current?.throwBall();
 
@@ -702,17 +709,17 @@ export function BattleScreen({ navigation, route }: Props) {
         >
           <Pressable
             testID="catch-ball"
-            onPress={handleCatch}
-            disabled={actionsDisabled || !availableBall}
+            onPress={() => setShowTraps(true)}
+            disabled={actionsDisabled || !hasTraps}
             style={({ pressed }) => [
               styles.moveButton,
               styles.catchButton,
-              (actionsDisabled || !availableBall) && styles.moveButtonDisabled,
+              (actionsDisabled || !hasTraps) && styles.moveButtonDisabled,
               pressed && styles.moveButtonPressed,
             ]}
           >
-            <Text style={styles.moveName}>{availableBall ? `Throw ${availableBall.name}` : "No balls left"}</Text>
-            <Text style={styles.cruxHint}>{availableBall ? "costs the turn if it fails" : "check your Bag"}</Text>
+            <Text style={styles.moveName}>{hasTraps ? "Throw a Trap" : "No traps left"}</Text>
+            <Text style={styles.cruxHint}>{hasTraps ? "choose which one — costs the turn if it fails" : "check your Bag"}</Text>
           </Pressable>
         </HoverTip>
         <HoverTip style={styles.moveButtonHoverWrap} text="Send out a different party member. Voluntary switches cost the turn; a fainted lead gets a free forced switch instead.">
@@ -763,6 +770,33 @@ export function BattleScreen({ navigation, route }: Props) {
           </Pressable>
         </HoverTip>
       </View>
+
+      <Modal visible={showTraps} transparent animationType="none" onRequestClose={() => setShowTraps(false)}>
+        <View style={styles.sheetBackdrop}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>Throw which trap?</Text>
+            <Text style={styles.sheetNote}>
+              A sturdier trap holds better. Wearing the creature down and inflicting a status
+              condition help more than any trap does.
+            </Text>
+            {ownedTraps.map((trap) => (
+              <Pressable
+                key={trap.id}
+                testID={`throw-trap-${trap.id}`}
+                onPress={() => handleCatch(trap)}
+                style={({ pressed }) => [styles.sheetRow, pressed && styles.sheetRowPressed]}
+              >
+                <Text style={styles.sheetCreature}>
+                  {trap.name} <Text style={styles.sheetLevel}>x{inventory[trap.id] ?? 0}</Text>
+                </Text>
+                <Text style={styles.sheetHp}>{(trap.catchMultiplier ?? 1).toFixed(1)}x catch rate</Text>
+              </Pressable>
+            ))}
+            {ownedTraps.length === 0 && <Text style={styles.sheetNote}>No traps in your Bag.</Text>}
+            <PrimaryButton label="Close" variant="secondary" onPress={() => setShowTraps(false)} />
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={showItems} transparent animationType="none" onRequestClose={() => setShowItems(false)}>
         <View style={styles.sheetBackdrop}>
@@ -1032,6 +1066,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 18,
     fontWeight: "700",
+  },
+  sheetRowPressed: {
+    backgroundColor: colors.surfaceAlt,
+    transform: [{ scale: 0.99 }],
   },
   sheetRow: {
     flexDirection: "row",
