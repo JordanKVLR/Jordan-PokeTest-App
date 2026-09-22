@@ -11,6 +11,8 @@ const MAX_OFFSET = (BASE_SIZE - KNOB_SIZE) / 2;
 const DEAD_ZONE = 14;
 /** While held, steps repeat at this rate, so you can walk a long road without re-dragging. */
 const REPEAT_MS = 190;
+/** How far the off-axis has to beat the locked axis before the stick changes direction. */
+const AXIS_FLIP_RATIO = 1.7;
 
 /**
  * A thumb-stick for walking the map. Movement is still tile-by-tile underneath — the stick
@@ -34,10 +36,29 @@ export function Joystick({ onStep, disabled }: { onStep: (direction: Direction) 
     heldDirection.current = null;
   }
 
+  /**
+   * Strictly four-way. The first axis to clear the dead zone is locked in for the rest of the
+   * hold, and only flips if the other axis beats it by a wide margin — without that, a drag
+   * to the right with a few pixels of vertical wobble kept flipping to up/down between
+   * repeats and the player walked diagonally.
+   */
   function directionFor(dx: number, dy: number): Direction | null {
     if (Math.hypot(dx, dy) < DEAD_ZONE) return null;
-    // Whichever axis dominates wins, so diagonals resolve to a single grid step.
-    return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
+    const horizontal = Math.abs(dx);
+    const vertical = Math.abs(dy);
+    const held = heldDirection.current;
+    const heldIsHorizontal = held === "left" || held === "right";
+
+    let useHorizontal: boolean;
+    if (!held) {
+      useHorizontal = horizontal > vertical;
+    } else if (heldIsHorizontal) {
+      useHorizontal = vertical <= horizontal * AXIS_FLIP_RATIO;
+    } else {
+      useHorizontal = horizontal > vertical * AXIS_FLIP_RATIO;
+    }
+
+    return useHorizontal ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
   }
 
   function handleDirection(direction: Direction | null) {
@@ -58,10 +79,19 @@ export function Joystick({ onStep, disabled }: { onStep: (direction: Direction) 
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: () => setActive(true),
       onPanResponderMove: (_evt, gesture) => {
-        const clampedX = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, gesture.dx));
-        const clampedY = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, gesture.dy));
-        knob.setValue({ x: clampedX, y: clampedY });
-        handleDirection(directionFor(gesture.dx, gesture.dy));
+        const direction = directionFor(gesture.dx, gesture.dy);
+        handleDirection(direction);
+
+        // The knob slides along the locked axis only — showing a diagonal would promise
+        // movement the grid can't deliver.
+        const clamp = (v: number) => Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, v));
+        if (direction === "left" || direction === "right") {
+          knob.setValue({ x: clamp(gesture.dx), y: 0 });
+        } else if (direction === "up" || direction === "down") {
+          knob.setValue({ x: 0, y: clamp(gesture.dy) });
+        } else {
+          knob.setValue({ x: clamp(gesture.dx), y: clamp(gesture.dy) });
+        }
       },
       onPanResponderRelease: () => {
         setActive(false);

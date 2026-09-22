@@ -36,10 +36,12 @@ const RAW: Array<{
   gym?: GymDef;
   requiresMedal?: string;
 }> = [
+  // Terrain deliberately never repeats between neighbouring stages — see the rule enforced in
+  // the tests. Walking the run should feel like crossing an island, not grinding one field.
   { id: "melita_woods", name: "Melita Woods", biomes: ["grass", "rock"] },
-  { id: "buskett_groves", name: "Buskett Groves", biomes: ["grass", "rock"] },
-  { id: "dingli_cliffs", name: "Dingli Cliffs", biomes: ["rock", "grass"] },
-  { id: "wied_ghasel", name: "Wied il-Għasel", biomes: ["grass", "water"] },
+  { id: "salina_saltpans", name: "Salina Saltpans", biomes: ["water", "sand"] },
+  { id: "dingli_cliffs", name: "Dingli Cliffs", biomes: ["rock", "water"] },
+  { id: "ramla_dunes", name: "Ramla Dunes", biomes: ["sand", "grass"] },
   {
     id: "mdina_bastions",
     name: "Mdina Bastions",
@@ -53,10 +55,10 @@ const RAW: Array<{
     },
   },
 
-  { id: "luzzu_harbour", name: "Luzzu Harbour", biomes: ["water", "sand"], requiresMedal: "silent_city" },
-  { id: "marsaxlokk_bay", name: "Marsaxlokk Bay", biomes: ["water", "sand"] },
-  { id: "salina_saltpans", name: "Salina Saltpans", biomes: ["water", "sand"] },
-  { id: "comino_lagoon", name: "Comino Blue Lagoon", biomes: ["water", "rock"] },
+  { id: "marsaxlokk_bay", name: "Marsaxlokk Bay", biomes: ["water", "sand"], requiresMedal: "silent_city" },
+  { id: "wied_ghasel", name: "Wied il-Għasel", biomes: ["grass", "water"] },
+  { id: "sirocco_flats", name: "Sirocco Flats", biomes: ["sand", "rock"] },
+  { id: "simar_wetlands", name: "Is-Simar Wetlands", biomes: ["water", "grass"] },
   {
     id: "fort_st_angelo",
     name: "Fort St Angelo",
@@ -70,10 +72,10 @@ const RAW: Array<{
     },
   },
 
-  { id: "azure_caverns", name: "Azure Caverns", biomes: ["rock", "water"], requiresMedal: "great_siege" },
-  { id: "ghar_dalam", name: "Għar Dalam Deep", biomes: ["rock", "grass"] },
-  { id: "hypogeum_descent", name: "Hypogeum Descent", biomes: ["rock", "grass"] },
-  { id: "ggantija_terrace", name: "Ġgantija Terrace", biomes: ["rock", "grass"] },
+  { id: "mtahleb_terraces", name: "Mtaħleb Terraces", biomes: ["grass", "sand"], requiresMedal: "great_siege" },
+  { id: "azure_caverns", name: "Azure Caverns", biomes: ["rock", "water"] },
+  { id: "golden_bay", name: "Golden Bay Sands", biomes: ["sand", "grass"] },
+  { id: "comino_lagoon", name: "Comino Blue Lagoon", biomes: ["water", "rock"] },
   {
     id: "hagar_qim",
     name: "Ħaġar Qim Sanctum",
@@ -87,10 +89,10 @@ const RAW: Array<{
     },
   },
 
-  { id: "ramla_dunes", name: "Ramla Dunes", biomes: ["sand", "grass"], requiresMedal: "solstice" },
-  { id: "golden_bay", name: "Golden Bay Sands", biomes: ["sand", "water"] },
-  { id: "sirocco_flats", name: "Sirocco Flats", biomes: ["sand", "rock"] },
-  { id: "delimara_point", name: "Delimara Point", biomes: ["sand", "water"] },
+  { id: "delimara_point", name: "Delimara Point", biomes: ["sand", "water"], requiresMedal: "solstice" },
+  { id: "ggantija_terrace", name: "Ġgantija Terrace", biomes: ["grass", "rock"] },
+  { id: "ghar_dalam", name: "Għar Dalam Deep", biomes: ["sand", "rock"] },
+  { id: "wied_babu", name: "Wied Babu Gorge", biomes: ["grass", "water"] },
   {
     id: "grand_harbour",
     name: "Valletta Grand Harbour",
@@ -131,6 +133,15 @@ const BY_ID = new Map(STAGES.map((s) => [s.id, s]));
 
 export function getStage(zoneId: string): StageDef | undefined {
   return BY_ID.get(zoneId);
+}
+
+/**
+ * Maps a possibly-stale zone id onto a real one. A save written before the stage list was
+ * reshuffled can name a zone that no longer exists; dropping such a player back at the start
+ * beats crashing on load.
+ */
+export function resolveZoneId(zoneId: string | null | undefined): string {
+  return zoneId && BY_ID.has(zoneId) ? zoneId : FIRST_STAGE_ID;
 }
 
 export function stageIndexOf(zoneId: string): number {

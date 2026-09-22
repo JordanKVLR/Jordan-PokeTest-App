@@ -1,5 +1,5 @@
 import { getMap, isWalkable, biomeAt, isExitTile, isEntranceTile, isHealTile, findTilePosition } from "../mapData";
-import { STAGES, getStage, nextStageId, previousStageId, ALL_MEDALS } from "../zoneProgression";
+import { STAGES, getStage, nextStageId, previousStageId, ALL_MEDALS, resolveZoneId, FIRST_STAGE_ID } from "../zoneProgression";
 import { trainersForZone, gymLeaderForZone } from "../trainers";
 
 /** Flood fill from a start tile across walkable tiles. */
@@ -43,6 +43,41 @@ describe("stage progression", () => {
       if (!next) continue; // the final gym ends the run
       expect(next.requiresMedal).toBe(gymStage.gym!.medalId);
     }
+  });
+
+  it("never repeats terrain between neighbouring stages", () => {
+    for (let i = 1; i < STAGES.length; i++) {
+      const previous = STAGES[i - 1];
+      const current = STAGES[i];
+      const samePair =
+        new Set(previous.biomes).size === new Set(current.biomes).size &&
+        previous.biomes.every((b) => current.biomes.includes(b));
+
+      expect({ stage: current.id, samePair }).toEqual({ stage: current.id, samePair: false });
+      // The dominant terrain has to change too, or two stages in a row read the same.
+      expect({ stage: current.id, primary: current.biomes[0] }).not.toEqual({
+        stage: current.id,
+        primary: previous.biomes[0],
+      });
+    }
+  });
+
+  it("uses every terrain across the run rather than leaning on two", () => {
+    const counts = new Map<string, number>();
+    for (const stage of STAGES) {
+      for (const biome of stage.biomes) counts.set(biome, (counts.get(biome) ?? 0) + 1);
+    }
+    expect([...counts.keys()].sort()).toEqual(["grass", "rock", "sand", "water"]);
+    // No single terrain should dominate: 40 slots over 4 terrains, so ~10 each.
+    for (const [, count] of counts) expect(count).toBeGreaterThanOrEqual(7);
+  });
+
+  it("falls back to the first stage for a zone id from an older save", () => {
+    expect(resolveZoneId("buskett_groves")).toBe(FIRST_STAGE_ID);
+    expect(resolveZoneId(undefined)).toBe(FIRST_STAGE_ID);
+    expect(resolveZoneId("melita_woods")).toBe("melita_woods");
+    // getMap must not throw on a stale id either — that would break loading a save.
+    expect(() => getMap("hypogeum_descent")).not.toThrow();
   });
 
   it("chains every stage to its neighbours", () => {

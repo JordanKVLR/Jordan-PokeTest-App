@@ -51,6 +51,24 @@ const DIRECTION_DELTA: Record<Direction, { dRow: number; dCol: number; glyph: st
  * the viewport, but clamps at the map's edges so the camera never shows past the map bounds.
  * Returns a plain 0 (no scrolling needed) when the whole axis already fits inside the viewport.
  */
+const BIOME_WORDS: Record<string, string> = {
+  grass: "tall grass",
+  rock: "broken rock",
+  water: "shallows",
+  sand: "open sand",
+};
+
+/**
+ * Names the terrain this particular stage is built from. Every stage draws from a different
+ * pair to the one before it, so saying "grass, rock, water and sand" on all twenty would
+ * flatten exactly the variety the stage list is there to create.
+ */
+function biomeBlurb(biomes: readonly string[] | undefined): string {
+  const words = (biomes ?? ["grass"]).map((b) => BIOME_WORDS[b] ?? b);
+  const joined = words.length > 1 ? `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}` : words[0];
+  return `wild creatures lurk in the ${joined}`;
+}
+
 function cameraOffset(playerAnim: Animated.Value, mapPx: number, viewportPx: number) {
   if (mapPx <= viewportPx) return 0;
   const half = (viewportPx - TILE_SIZE) / 2;
@@ -236,8 +254,8 @@ export function MapScreen({ navigation, route }: Props) {
     <ScreenBackground style={styles.container}>
       <Text style={styles.title}>{map.zoneName}</Text>
       <Text style={styles.subtitle}>
-        Stage {stage?.stage ?? 1} of {TOTAL_STAGES} · wild creatures lurk in the tall grass, rock,
-        water and sand. The chapel restores your party; trainers on the road must be beaten to pass.
+        Stage {stage?.stage ?? 1} of {TOTAL_STAGES} · {biomeBlurb(stage?.biomes)}. The chapel
+        restores your party; trainers on the road must be beaten to pass.
       </Text>
 
       <View style={[styles.gridWrap, { width: viewportWidth, height: viewportHeight }]}>

@@ -37,6 +37,9 @@ import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { LevelUpModal, type LevelUpRevealData } from "./components/LevelUpModal";
 import { EvolutionModal, type EvolutionRevealData } from "./components/EvolutionModal";
 import { MoveLearnModal, type MoveLearnPrompt } from "./components/MoveLearnModal";
+import { BlackoutOverlay } from "./components/BlackoutOverlay";
+import { getMap, findTilePosition } from "../game/mapData";
+import { getZoneName } from "../game/zones";
 import { colors } from "./theme";
 
 /** Chance a defeated or caught wild creature drops a Kinnie — rare, never sold. */
@@ -109,6 +112,7 @@ export function BattleScreen({ navigation, route }: Props) {
   const replacePartyMemberMove = useGameStore((s) => s.replacePartyMemberMove);
   const markTrainerDefeated = useGameStore((s) => s.markTrainerDefeated);
   const awardMedal = useGameStore((s) => s.awardMedal);
+  const healFaintedPartyMembers = useGameStore((s) => s.healFaintedPartyMembers);
   const party = useGameStore((s) => s.party);
 
   const [activeUid] = useState<string | undefined>(() => party.find((m) => m.currentHp > 0)?.uid);
@@ -998,7 +1002,24 @@ export function BattleScreen({ navigation, route }: Props) {
         />
       )}
 
-      <Modal visible={!!outcome && !levelUpReveal && !evolutionReveal && movePrompts.length === 0} transparent animationType="fade" onRequestClose={() => {}}>
+      {outcome === "enemy" && (
+        <BlackoutOverlay
+          zoneName={getZoneName(currentZoneId)}
+          onContinue={() => {
+            // Wake at the zone's chapel with the party restored — losing costs you your
+            // place on the road, not your progress.
+            healFaintedPartyMembers();
+            const map = getMap(currentZoneId);
+            const chapel = findTilePosition(map, "heal") ?? map.playerStart;
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Map", params: { zoneId: currentZoneId, startAt: chapel } }],
+            });
+          }}
+        />
+      )}
+
+      <Modal visible={!!outcome && outcome !== "enemy" && !levelUpReveal && !evolutionReveal && movePrompts.length === 0} transparent animationType="fade" onRequestClose={() => {}}>
         <View style={styles.resultOverlay}>
           <Text style={styles.resultTitle}>
             {outcome === "player"

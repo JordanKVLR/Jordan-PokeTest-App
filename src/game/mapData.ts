@@ -1,5 +1,5 @@
 import { generateZoneMap } from "./mapGenerator";
-import { getStage, nextStageId, previousStageId } from "./zoneProgression";
+import { getStage, nextStageId, previousStageId, resolveZoneId } from "./zoneProgression";
 
 /** The four terrain types that can trigger a wild encounter — each zone mixes at least two of
  * these, and each biome draws from its own themed wild-creature pool (see encounterTable.ts). */
@@ -41,7 +41,9 @@ function buildMap(zoneId: string): TileMap {
   };
 }
 
-export function getMap(zoneId: string): TileMap {
+export function getMap(requestedZoneId: string): TileMap {
+  // Tolerate a stale id from an older save rather than throwing on load.
+  const zoneId = resolveZoneId(requestedZoneId);
   const cached = mapCache.get(zoneId);
   if (cached) return cached;
   const built = buildMap(zoneId);
