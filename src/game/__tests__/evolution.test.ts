@@ -23,8 +23,15 @@ function makeMember(overrides: Partial<PartyMember> = {}): PartyMember {
 }
 
 describe("checkEvolution", () => {
-  it("returns null for a species with no evolution line at all", () => {
-    expect(checkEvolution("fossary", 100)).toBeNull();
+  it("returns null for a species it has never heard of", () => {
+    // Every creature in the game now sits in a line, so the only "no line" case left is a
+    // species id that isn't real — e.g. one left behind in an old save.
+    expect(checkEvolution("not_a_species", 100)).toBeNull();
+  });
+
+  it("evolves a final form no further", () => {
+    expect(checkEvolution("granmastru", 100)).toBeNull();
+    expect(checkEvolution("mosstaur", 100)).toBeNull();
   });
 
   it("returns null below the evolution threshold", () => {

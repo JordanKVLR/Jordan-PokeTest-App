@@ -1,4 +1,4 @@
-import { getMap, isWalkable, biomeAt, isExitTile, isEntranceTile, isHealTile, findTilePosition } from "../mapData";
+import { getMap, isWalkable, biomeAt, isExitTile, isEntranceTile, isHealTile, isEncounterTile, findTilePosition } from "../mapData";
 import { STAGES, getStage, nextStageId, previousStageId, ALL_MEDALS, resolveZoneId, FIRST_STAGE_ID } from "../zoneProgression";
 import { trainersForZone, gymLeaderForZone } from "../trainers";
 
@@ -112,6 +112,70 @@ describe("generated zone maps", () => {
     }
     const gym = gymLeaderForZone(zoneId);
     if (gym) expect(reachable.has(`${gym.position.row},${gym.position.col}`)).toBe(true);
+  });
+
+  it("runs a clear two-lane road from the entrance to the exit", () => {
+    for (const stage of STAGES) {
+      const map = getMap(stage.id);
+      const entrance = map.playerStart;
+      const exit = findTilePosition(map, "exit")!;
+
+      // Walk the road itself: from the entrance, every column must offer a path tile, and the
+      // row it sits on may only shift by one per step. That is what makes the way out legible.
+      let row = entrance.row;
+      for (let col = entrance.col + 1; col <= exit.col; col++) {
+        const options = [row - 1, row, row + 1].filter(
+          (r) => map.rows[r]?.[col] === "path" || map.rows[r]?.[col] === "exit"
+        );
+        expect({ stage: stage.id, col, hasRoad: options.length > 0 }).toEqual({
+          stage: stage.id,
+          col,
+          hasRoad: true,
+        });
+        // Prefer staying level, so the walk tracks the road rather than drifting off it.
+        row = options.includes(row) ? row : options[0];
+      }
+      expect({ stage: stage.id, endsAtExit: Math.abs(row - exit.row) <= 1 }).toEqual({
+        stage: stage.id,
+        endsAtExit: true,
+      });
+    }
+  });
+
+  it("keeps wild encounters off the road, so the route is genuinely the fast way through", () => {
+    for (const stage of STAGES) {
+      const map = getMap(stage.id);
+      for (let r = 0; r < map.rows.length; r++) {
+        for (let c = 0; c < map.rows[r].length; c++) {
+          if (map.rows[r][c] !== "path") continue;
+          expect({ stage: stage.id, at: `${r},${c}`, encounter: isEncounterTile(map, r, c) }).toEqual({
+            stage: stage.id,
+            at: `${r},${c}`,
+            encounter: false,
+          });
+        }
+      }
+    }
+  });
+
+  it("stands regular trainers beside the road and the gym leader on it", () => {
+    for (const stage of STAGES) {
+      const map = getMap(stage.id);
+      for (const trainer of trainersForZone(stage.id).filter((t) => !t.isGymLeader)) {
+        const tile = map.rows[trainer.position.row][trainer.position.col];
+        expect({ stage: stage.id, who: trainer.name, tile }).not.toEqual({
+          stage: stage.id,
+          who: trainer.name,
+          tile: "path",
+        });
+      }
+      const gym = gymLeaderForZone(stage.id);
+      if (!gym) continue;
+      expect({ stage: stage.id, tile: map.rows[gym.position.row][gym.position.col] }).toEqual({
+        stage: stage.id,
+        tile: "path",
+      });
+    }
   });
 
   it("is deterministic — the same zone builds identically every time", () => {

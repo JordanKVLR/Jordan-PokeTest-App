@@ -2,12 +2,26 @@
   "learnsets": {
     "fossary": [
       {
+        "level": 9,
+        "moveId": "honey_snare"
+      },
+      {
         "level": 16,
         "moveId": "honeyed_step"
       },
       {
-        "level": 32,
-        "moveId": "honey_snare"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "garrigarn": [
+      {
+        "level": 16,
+        "moveId": "honeyed_step"
+      },
+      {
+        "level": 24,
+        "moveId": "thorn_barrage"
       },
       {
         "level": 43,
@@ -16,118 +30,166 @@
     ],
     "qortong": [
       {
-        "level": 16,
-        "moveId": "stone_stance"
+        "level": 9,
+        "moveId": "trilithon_slam"
       },
       {
-        "level": 32,
-        "moveId": "mosaic_shard"
+        "level": 16,
+        "moveId": "stone_stance"
       },
       {
         "level": 43,
-        "moveId": "trilithon_slam"
+        "moveId": "headlong_rush"
       }
     ],
-    "xrobbog": [
+    "qortaghan": [
       {
         "level": 16,
         "moveId": "stone_stance"
       },
       {
-        "level": 32,
-        "moveId": "mosaic_shard"
+        "level": 24,
+        "moveId": "quarry_collapse"
       },
       {
         "level": 43,
         "moveId": "dust_veil"
       }
     ],
-    "karkarun": [
+    "xrobbog": [
+      {
+        "level": 9,
+        "moveId": "trilithon_slam"
+      },
       {
         "level": 16,
         "moveId": "stone_stance"
       },
       {
-        "level": 32,
-        "moveId": "mosaic_shard"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "xrobbraxx": [
+      {
+        "level": 16,
+        "moveId": "stone_stance"
+      },
+      {
+        "level": 24,
+        "moveId": "scimitar_arc"
       },
       {
         "level": 43,
-        "moveId": "trilithon_slam"
+        "moveId": "corsair_glare"
       }
     ],
     "bulqajra": [
       {
         "level": 9,
-        "moveId": "palm_strike"
+        "moveId": "legion_charge"
       },
       {
         "level": 16,
-        "moveId": "stone_stance"
-      },
-      {
-        "level": 32,
-        "moveId": "mosaic_shard"
+        "moveId": "war_cry"
       },
       {
         "level": 43,
-        "moveId": "war_cry"
+        "moveId": "headlong_rush"
       }
     ],
-    "santwarr": [
-      {
-        "level": 9,
-        "moveId": "psy_pulse"
-      },
+    "bulqajrun": [
       {
         "level": 16,
-        "moveId": "stone_stance"
+        "moveId": "war_cry"
       },
       {
-        "level": 32,
-        "moveId": "mosaic_shard"
+        "level": 24,
+        "moveId": "trilithon_slam"
       },
       {
         "level": 43,
-        "moveId": "oracle_focus"
+        "moveId": "stone_stance"
       }
     ],
     "luzzitt": [
       {
+        "level": 9,
+        "moveId": "noria_jet"
+      },
+      {
         "level": 16,
         "moveId": "tide_pull"
       },
       {
-        "level": 32,
-        "moveId": "harbour_swell"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "luzzarju": [
+      {
+        "level": 16,
+        "moveId": "tide_pull"
+      },
+      {
+        "level": 24,
+        "moveId": "signal_flare"
       },
       {
         "level": 43,
-        "moveId": "noria_jet"
+        "moveId": "sirocco_gust"
       }
     ],
     "marsupp": [
       {
+        "level": 9,
+        "moveId": "noria_jet"
+      },
+      {
         "level": 16,
         "moveId": "tide_pull"
       },
       {
-        "level": 32,
-        "moveId": "harbour_swell"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "marsuppjun": [
+      {
+        "level": 16,
+        "moveId": "tide_pull"
+      },
+      {
+        "level": 24,
+        "moveId": "tyrian_dye"
       },
       {
         "level": 43,
-        "moveId": "noria_jet"
+        "moveId": "venom_haze"
       }
     ],
     "kalanka": [
       {
+        "level": 9,
+        "moveId": "noria_jet"
+      },
+      {
         "level": 16,
         "moveId": "tide_pull"
       },
       {
-        "level": 32,
-        "moveId": "harbour_swell"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "kalankros": [
+      {
+        "level": 16,
+        "moveId": "tide_pull"
+      },
+      {
+        "level": 24,
+        "moveId": "trilithon_slam"
       },
       {
         "level": 43,
@@ -137,33 +199,53 @@
     "vurjenn": [
       {
         "level": 9,
-        "moveId": "gale_dive"
+        "moveId": "signal_flare"
       },
       {
         "level": 16,
-        "moveId": "tide_pull"
-      },
-      {
-        "level": 32,
-        "moveId": "harbour_swell"
+        "moveId": "sirocco_gust"
       },
       {
         "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "vurjenzu": [
+      {
+        "level": 16,
         "moveId": "sirocco_gust"
+      },
+      {
+        "level": 24,
+        "moveId": "noria_jet"
+      },
+      {
+        "level": 43,
+        "moveId": "tide_pull"
       }
     ],
     "ondallus": [
       {
         "level": 9,
-        "moveId": "wyrm_surge"
+        "moveId": "noria_jet"
       },
       {
         "level": 16,
         "moveId": "tide_pull"
       },
       {
-        "level": 32,
-        "moveId": "harbour_swell"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "ondraguna": [
+      {
+        "level": 16,
+        "moveId": "tide_pull"
+      },
+      {
+        "level": 24,
+        "moveId": "leviathan_coil"
       },
       {
         "level": 43,
@@ -172,90 +254,350 @@
     ],
     "ramliet": [
       {
-        "level": 16,
-        "moveId": "dust_veil"
+        "level": 9,
+        "moveId": "quarry_collapse"
       },
       {
-        "level": 32,
-        "moveId": "quarry_collapse"
+        "level": 16,
+        "moveId": "dust_veil"
       },
       {
         "level": 43,
-        "moveId": "steady_breath"
+        "moveId": "headlong_rush"
       }
     ],
-    "xemxun": [
+    "ramlietan": [
       {
         "level": 16,
         "moveId": "dust_veil"
       },
       {
-        "level": 32,
-        "moveId": "quarry_collapse"
-      },
-      {
-        "level": 43,
-        "moveId": "sun_dazzle"
-      }
-    ],
-    "dunkorr": [
-      {
-        "level": 16,
-        "moveId": "dust_veil"
-      },
-      {
-        "level": 32,
-        "moveId": "quarry_collapse"
+        "level": 24,
+        "moveId": "trilithon_slam"
       },
       {
         "level": 43,
         "moveId": "stone_stance"
       }
     ],
-    "sirokk": [
+    "xemxun": [
       {
         "level": 9,
-        "moveId": "gale_dive"
+        "moveId": "siege_volley"
+      },
+      {
+        "level": 16,
+        "moveId": "sun_dazzle"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "xemxarju": [
+      {
+        "level": 16,
+        "moveId": "sun_dazzle"
+      },
+      {
+        "level": 24,
+        "moveId": "quarry_collapse"
+      },
+      {
+        "level": 43,
+        "moveId": "dust_veil"
+      }
+    ],
+    "dunkorr": [
+      {
+        "level": 9,
+        "moveId": "quarry_collapse"
       },
       {
         "level": 16,
         "moveId": "dust_veil"
       },
       {
-        "level": 32,
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "dunkorrax": [
+      {
+        "level": 16,
+        "moveId": "dust_veil"
+      },
+      {
+        "level": 24,
+        "moveId": "cross_guard"
+      },
+      {
+        "level": 43,
+        "moveId": "bastion_call"
+      }
+    ],
+    "sirokk": [
+      {
+        "level": 9,
+        "moveId": "signal_flare"
+      },
+      {
+        "level": 16,
+        "moveId": "sirocco_gust"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "sirokkjun": [
+      {
+        "level": 16,
+        "moveId": "sirocco_gust"
+      },
+      {
+        "level": 24,
+        "moveId": "scimitar_arc"
+      },
+      {
+        "level": 43,
+        "moveId": "corsair_glare"
+      }
+    ],
+    "ossijan": [
+      {
+        "level": 9,
         "moveId": "quarry_collapse"
+      },
+      {
+        "level": 16,
+        "moveId": "dust_veil"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "ossijark": [
+      {
+        "level": 16,
+        "moveId": "dust_veil"
+      },
+      {
+        "level": 24,
+        "moveId": "catacomb_grasp"
+      },
+      {
+        "level": 43,
+        "moveId": "spirit_drain"
+      }
+    ],
+    "qattusepp": [
+      {
+        "level": 9,
+        "moveId": "headlong_rush"
+      },
+      {
+        "level": 16,
+        "moveId": "steady_breath"
+      }
+    ],
+    "qattusinja": [
+      {
+        "level": 16,
+        "moveId": "steady_breath"
+      },
+      {
+        "level": 24,
+        "moveId": "festa_dazzle"
+      },
+      {
+        "level": 43,
+        "moveId": "hymn_of_valour"
+      }
+    ],
+    "kelbfenek": [
+      {
+        "level": 9,
+        "moveId": "headlong_rush"
+      },
+      {
+        "level": 16,
+        "moveId": "steady_breath"
+      }
+    ],
+    "kelbsajjied": [
+      {
+        "level": 16,
+        "moveId": "steady_breath"
+      },
+      {
+        "level": 24,
+        "moveId": "legion_charge"
+      },
+      {
+        "level": 43,
+        "moveId": "war_cry"
+      }
+    ],
+    "hamiemu": [
+      {
+        "level": 9,
+        "moveId": "headlong_rush"
+      },
+      {
+        "level": 16,
+        "moveId": "steady_breath"
+      }
+    ],
+    "hamiemarju": [
+      {
+        "level": 16,
+        "moveId": "steady_breath"
+      },
+      {
+        "level": 24,
+        "moveId": "signal_flare"
       },
       {
         "level": 43,
         "moveId": "sirocco_gust"
       }
     ],
-    "ossijan": [
+    "silgina": [
       {
-        "level": 16,
-        "moveId": "dust_veil"
+        "level": 9,
+        "moveId": "tramuntana_chill"
       },
       {
-        "level": 32,
+        "level": 16,
+        "moveId": "frost_armour"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "silgmewga": [
+      {
+        "level": 16,
+        "moveId": "frost_armour"
+      },
+      {
+        "level": 24,
+        "moveId": "noria_jet"
+      },
+      {
+        "level": 43,
+        "moveId": "tide_pull"
+      }
+    ],
+    "tramunt": [
+      {
+        "level": 9,
+        "moveId": "tramuntana_chill"
+      },
+      {
+        "level": 16,
+        "moveId": "frost_armour"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "tramuntarju": [
+      {
+        "level": 16,
+        "moveId": "frost_armour"
+      },
+      {
+        "level": 24,
+        "moveId": "signal_flare"
+      },
+      {
+        "level": 43,
+        "moveId": "sirocco_gust"
+      }
+    ],
+    "karkarun": [
+      {
+        "level": 9,
+        "moveId": "trilithon_slam"
+      },
+      {
+        "level": 16,
+        "moveId": "stone_stance"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "karkarotta": [
+      {
+        "level": 16,
+        "moveId": "stone_stance"
+      },
+      {
+        "level": 24,
         "moveId": "quarry_collapse"
       },
       {
         "level": 43,
-        "moveId": "steady_breath"
+        "moveId": "dust_veil"
+      }
+    ],
+    "santwarr": [
+      {
+        "level": 9,
+        "moveId": "trilithon_slam"
+      },
+      {
+        "level": 16,
+        "moveId": "stone_stance"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "santwarjun": [
+      {
+        "level": 16,
+        "moveId": "stone_stance"
+      },
+      {
+        "level": 24,
+        "moveId": "hypogeum_echo"
+      },
+      {
+        "level": 43,
+        "moveId": "oracle_focus"
       }
     ],
     "dormina": [
+      {
+        "level": 9,
+        "moveId": "hypogeum_echo"
+      },
+      {
+        "level": 16,
+        "moveId": "oracle_focus"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "dorminarja": [
       {
         "level": 16,
         "moveId": "oracle_focus"
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
-        "moveId": "hypogeum_echo"
+        "moveId": "festa_dazzle"
       },
       {
         "level": 43,
@@ -264,16 +606,26 @@
     ],
     "ggantroll": [
       {
+        "level": 9,
+        "moveId": "trilithon_slam"
+      },
+      {
+        "level": 16,
+        "moveId": "stone_stance"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "ggantmastru": [
+      {
         "level": 16,
         "moveId": "stone_stance"
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
-        "moveId": "mosaic_shard"
+        "moveId": "legion_charge"
       },
       {
         "level": 43,
@@ -282,12 +634,26 @@
     ],
     "bornadur": [
       {
+        "level": 9,
+        "moveId": "trilithon_slam"
+      },
+      {
         "level": 16,
         "moveId": "stone_stance"
       },
       {
-        "level": 32,
-        "moveId": "mosaic_shard"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "bornaduru": [
+      {
+        "level": 16,
+        "moveId": "stone_stance"
+      },
+      {
+        "level": 24,
+        "moveId": "scimitar_arc"
       },
       {
         "level": 43,
@@ -296,48 +662,54 @@
     ],
     "kartrutt": [
       {
-        "level": 16,
-        "moveId": "stone_stance"
+        "level": 9,
+        "moveId": "quarry_collapse"
       },
       {
-        "level": 32,
-        "moveId": "mosaic_shard"
+        "level": 16,
+        "moveId": "dust_veil"
       },
       {
         "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "kartruttan": [
+      {
+        "level": 16,
         "moveId": "dust_veil"
+      },
+      {
+        "level": 24,
+        "moveId": "trilithon_slam"
+      },
+      {
+        "level": 43,
+        "moveId": "stone_stance"
       }
     ],
     "murexil": [
+      {
+        "level": 9,
+        "moveId": "noria_jet"
+      },
       {
         "level": 16,
         "moveId": "tide_pull"
       },
       {
-        "level": 32,
-        "moveId": "harbour_swell"
-      },
-      {
         "level": 43,
-        "moveId": "venom_haze"
+        "moveId": "headlong_rush"
       }
     ],
     "tirjanu": [
-      {
-        "level": 9,
-        "moveId": "water_jet"
-      },
       {
         "level": 16,
         "moveId": "tide_pull"
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
-        "moveId": "noria_jet"
+        "moveId": "tyrian_dye"
       },
       {
         "level": 43,
@@ -346,16 +718,26 @@
     ],
     "lembuqa": [
       {
+        "level": 9,
+        "moveId": "noria_jet"
+      },
+      {
+        "level": 16,
+        "moveId": "tide_pull"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "bastimenta": [
+      {
         "level": 16,
         "moveId": "tide_pull"
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
-        "moveId": "noria_jet"
+        "moveId": "cross_guard"
       },
       {
         "level": 43,
@@ -364,16 +746,26 @@
     ],
     "ghajnuq": [
       {
+        "level": 9,
+        "moveId": "hypogeum_echo"
+      },
+      {
+        "level": 16,
+        "moveId": "oracle_focus"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "ghajnsahha": [
+      {
         "level": 16,
         "moveId": "oracle_focus"
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
-        "moveId": "hypogeum_echo"
+        "moveId": "noria_jet"
       },
       {
         "level": 43,
@@ -383,19 +775,15 @@
     "tessera": [
       {
         "level": 9,
-        "moveId": "rock_throw"
+        "moveId": "trilithon_slam"
       },
       {
         "level": 16,
         "moveId": "stone_stance"
       },
       {
-        "level": 32,
-        "moveId": "trilithon_slam"
-      },
-      {
         "level": 43,
-        "moveId": "oracle_focus"
+        "moveId": "headlong_rush"
       }
     ],
     "mosaikos": [
@@ -405,11 +793,7 @@
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
-        "moveId": "trilithon_slam"
+        "moveId": "hypogeum_echo"
       },
       {
         "level": 43,
@@ -418,12 +802,26 @@
     ],
     "amforu": [
       {
+        "level": 9,
+        "moveId": "quarry_collapse"
+      },
+      {
         "level": 16,
         "moveId": "dust_veil"
       },
       {
-        "level": 32,
-        "moveId": "quarry_collapse"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "amforjun": [
+      {
+        "level": 16,
+        "moveId": "dust_veil"
+      },
+      {
+        "level": 24,
+        "moveId": "noria_jet"
       },
       {
         "level": 43,
@@ -432,16 +830,26 @@
     ],
     "laurentu": [
       {
+        "level": 9,
+        "moveId": "thorn_barrage"
+      },
+      {
+        "level": 16,
+        "moveId": "sun_harvest"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "laurentissu": [
+      {
         "level": 16,
         "moveId": "sun_harvest"
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
-        "moveId": "thorn_barrage"
+        "moveId": "legion_charge"
       },
       {
         "level": 43,
@@ -450,16 +858,26 @@
     ],
     "vipaulus": [
       {
+        "level": 9,
+        "moveId": "tyrian_dye"
+      },
+      {
+        "level": 16,
+        "moveId": "venom_haze"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "vipaulinu": [
+      {
         "level": 16,
         "moveId": "venom_haze"
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
-        "moveId": "tyrian_dye"
+        "moveId": "legion_charge"
       },
       {
         "level": 43,
@@ -468,20 +886,16 @@
     ],
     "ghasel": [
       {
+        "level": 9,
+        "moveId": "honey_snare"
+      },
+      {
         "level": 16,
         "moveId": "honeyed_step"
       },
       {
-        "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
-        "moveId": "quarry_collapse"
-      },
-      {
         "level": 43,
-        "moveId": "dust_veil"
+        "moveId": "headlong_rush"
       }
     ],
     "nahlija": [
@@ -491,10 +905,6 @@
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
         "moveId": "festa_dazzle"
       },
       {
@@ -504,12 +914,26 @@
     ],
     "larinja": [
       {
+        "level": 9,
+        "moveId": "thorn_barrage"
+      },
+      {
         "level": 16,
         "moveId": "sun_harvest"
       },
       {
-        "level": 32,
-        "moveId": "thorn_barrage"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "larinjola": [
+      {
+        "level": 16,
+        "moveId": "sun_harvest"
+      },
+      {
+        "level": 24,
+        "moveId": "festa_dazzle"
       },
       {
         "level": 43,
@@ -518,16 +942,26 @@
     ],
     "sienja": [
       {
+        "level": 9,
+        "moveId": "noria_jet"
+      },
+      {
+        "level": 16,
+        "moveId": "tide_pull"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "sienjarja": [
+      {
         "level": 16,
         "moveId": "tide_pull"
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
-        "moveId": "harbour_swell"
+        "moveId": "cross_guard"
       },
       {
         "level": 43,
@@ -536,12 +970,16 @@
     ],
     "skudier": [
       {
+        "level": 9,
+        "moveId": "cross_guard"
+      },
+      {
         "level": 16,
         "moveId": "bastion_call"
       },
       {
         "level": 43,
-        "moveId": "steady_breath"
+        "moveId": "headlong_rush"
       }
     ],
     "kavallier": [
@@ -551,10 +989,6 @@
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
         "moveId": "legion_charge"
       },
       {
@@ -569,10 +1003,6 @@
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
         "moveId": "hypogeum_echo"
       },
       {
@@ -582,16 +1012,26 @@
     ],
     "falkun": [
       {
+        "level": 9,
+        "moveId": "signal_flare"
+      },
+      {
+        "level": 16,
+        "moveId": "sirocco_gust"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "falkunjier": [
+      {
         "level": 16,
         "moveId": "sirocco_gust"
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
-        "moveId": "signal_flare"
+        "moveId": "cross_guard"
       },
       {
         "level": 43,
@@ -600,37 +1040,53 @@
     ],
     "jannisar": [
       {
-        "level": 16,
-        "moveId": "sun_dazzle"
-      },
-      {
-        "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
+        "level": 9,
         "moveId": "legion_charge"
       },
       {
-        "level": 43,
+        "level": 16,
         "moveId": "war_cry"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "jannisarju": [
+      {
+        "level": 16,
+        "moveId": "war_cry"
+      },
+      {
+        "level": 24,
+        "moveId": "siege_volley"
+      },
+      {
+        "level": 43,
+        "moveId": "sun_dazzle"
       }
     ],
     "bombarda": [
       {
         "level": 9,
-        "moveId": "ember"
+        "moveId": "siege_volley"
       },
       {
         "level": 16,
         "moveId": "sun_dazzle"
       },
       {
-        "level": 24,
-        "moveId": "tackle"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "bombardun": [
+      {
+        "level": 16,
+        "moveId": "sun_dazzle"
       },
       {
-        "level": 32,
+        "level": 24,
         "moveId": "cross_guard"
       },
       {
@@ -640,15 +1096,25 @@
     ],
     "hilalux": [
       {
+        "level": 9,
+        "moveId": "scimitar_arc"
+      },
+      {
+        "level": 16,
+        "moveId": "corsair_glare"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "hilaluna": [
+      {
         "level": 16,
         "moveId": "corsair_glare"
       },
       {
         "level": 24,
-        "moveId": "tackle"
-      },
-      {
-        "level": 32,
         "moveId": "signal_flare"
       },
       {
@@ -658,33 +1124,53 @@
     ],
     "pustaljon": [
       {
-        "level": 16,
-        "moveId": "bastion_call"
+        "level": 9,
+        "moveId": "arc_flash"
       },
       {
-        "level": 32,
+        "level": 16,
+        "moveId": "static_charge"
+      },
+      {
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "pustaljunar": [
+      {
+        "level": 16,
+        "moveId": "static_charge"
+      },
+      {
+        "level": 24,
         "moveId": "cross_guard"
       },
       {
         "level": 43,
-        "moveId": "static_charge"
+        "moveId": "bastion_call"
       }
     ],
     "konvoj": [
       {
         "level": 9,
-        "moveId": "water_jet"
+        "moveId": "noria_jet"
       },
       {
         "level": 16,
         "moveId": "tide_pull"
       },
       {
-        "level": 24,
-        "moveId": "tackle"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "konvojarma": [
+      {
+        "level": 16,
+        "moveId": "tide_pull"
       },
       {
-        "level": 32,
+        "level": 24,
         "moveId": "cross_guard"
       },
       {
@@ -694,12 +1180,26 @@
     ],
     "ferrocane": [
       {
+        "level": 9,
+        "moveId": "arc_flash"
+      },
+      {
         "level": 16,
         "moveId": "static_charge"
       },
       {
-        "level": 32,
-        "moveId": "arc_flash"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "ferrocanun": [
+      {
+        "level": 16,
+        "moveId": "static_charge"
+      },
+      {
+        "level": 24,
+        "moveId": "siege_volley"
       },
       {
         "level": 43,
@@ -708,26 +1208,54 @@
     ],
     "katakomba": [
       {
-        "level": 16,
-        "moveId": "stone_stance"
+        "level": 9,
+        "moveId": "catacomb_grasp"
       },
       {
-        "level": 32,
-        "moveId": "mosaic_shard"
+        "level": 16,
+        "moveId": "spirit_drain"
       },
       {
         "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "katakombrun": [
+      {
+        "level": 16,
         "moveId": "spirit_drain"
+      },
+      {
+        "level": 24,
+        "moveId": "trilithon_slam"
+      },
+      {
+        "level": 43,
+        "moveId": "stone_stance"
       }
     ],
     "zavorra": [
+      {
+        "level": 9,
+        "moveId": "noria_jet"
+      },
       {
         "level": 16,
         "moveId": "tide_pull"
       },
       {
-        "level": 32,
-        "moveId": "harbour_swell"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "zavorrun": [
+      {
+        "level": 16,
+        "moveId": "tide_pull"
+      },
+      {
+        "level": 24,
+        "moveId": "cross_guard"
       },
       {
         "level": 43,
@@ -737,19 +1265,25 @@
     "aegilord": [
       {
         "level": 9,
-        "moveId": "palm_strike"
+        "moveId": "cross_guard"
       },
       {
         "level": 16,
         "moveId": "bastion_call"
       },
       {
-        "level": 24,
-        "moveId": "metal_claw"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "aegilordan": [
+      {
+        "level": 16,
+        "moveId": "bastion_call"
       },
       {
-        "level": 32,
-        "moveId": "cross_guard"
+        "level": 24,
+        "moveId": "legion_charge"
       },
       {
         "level": 43,
@@ -759,19 +1293,25 @@
     "megalithos": [
       {
         "level": 9,
-        "moveId": "psy_pulse"
+        "moveId": "trilithon_slam"
       },
       {
         "level": 16,
         "moveId": "stone_stance"
       },
       {
-        "level": 24,
-        "moveId": "rock_throw"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "megalithron": [
+      {
+        "level": 16,
+        "moveId": "stone_stance"
       },
       {
-        "level": 32,
-        "moveId": "mosaic_shard"
+        "level": 24,
+        "moveId": "hypogeum_echo"
       },
       {
         "level": 43,
@@ -781,51 +1321,65 @@
     "siroccus": [
       {
         "level": 9,
-        "moveId": "sand_blast"
+        "moveId": "signal_flare"
       },
       {
         "level": 16,
         "moveId": "sirocco_gust"
       },
       {
-        "level": 24,
-        "moveId": "gale_dive"
+        "level": 43,
+        "moveId": "headlong_rush"
+      }
+    ],
+    "siroccalis": [
+      {
+        "level": 16,
+        "moveId": "sirocco_gust"
       },
       {
-        "level": 32,
-        "moveId": "signal_flare"
+        "level": 24,
+        "moveId": "leviathan_coil"
       },
       {
         "level": 43,
-        "moveId": "dust_veil"
+        "moveId": "wyrm_presence"
       }
     ],
     "calfleaf": [
       {
+        "level": 9,
+        "moveId": "thorn_barrage"
+      },
+      {
         "level": 16,
         "moveId": "sun_harvest"
       },
       {
-        "level": 32,
-        "moveId": "thorn_barrage"
+        "level": 24,
+        "moveId": "vine_lash"
       },
       {
         "level": 43,
-        "moveId": "steady_breath"
+        "moveId": "headlong_rush"
       }
     ],
     "vinehorn": [
       {
+        "level": 9,
+        "moveId": "thorn_barrage"
+      },
+      {
         "level": 16,
         "moveId": "sun_harvest"
       },
       {
-        "level": 32,
-        "moveId": "thorn_barrage"
+        "level": 24,
+        "moveId": "vine_lash"
       },
       {
         "level": 43,
-        "moveId": "steady_breath"
+        "moveId": "headlong_rush"
       }
     ],
     "mosstaur": [
@@ -838,6 +1392,10 @@
         "moveId": "sun_harvest"
       },
       {
+        "level": 24,
+        "moveId": "quarry_collapse"
+      },
+      {
         "level": 32,
         "moveId": "thorn_barrage"
       },
@@ -848,16 +1406,20 @@
     ],
     "pharawoof": [
       {
+        "level": 9,
+        "moveId": "siege_volley"
+      },
+      {
         "level": 16,
         "moveId": "sun_dazzle"
       },
       {
-        "level": 32,
-        "moveId": "siege_volley"
+        "level": 24,
+        "moveId": "ember"
       },
       {
         "level": 43,
-        "moveId": "steady_breath"
+        "moveId": "headlong_rush"
       }
     ],
     "infernux": [
@@ -868,6 +1430,10 @@
       {
         "level": 16,
         "moveId": "sun_dazzle"
+      },
+      {
+        "level": 24,
+        "moveId": "hypogeum_echo"
       },
       {
         "level": 32,
@@ -888,6 +1454,10 @@
         "moveId": "sun_dazzle"
       },
       {
+        "level": 24,
+        "moveId": "hypogeum_echo"
+      },
+      {
         "level": 32,
         "moveId": "siege_volley"
       },
@@ -898,30 +1468,38 @@
     ],
     "duckling": [
       {
+        "level": 9,
+        "moveId": "noria_jet"
+      },
+      {
         "level": 16,
         "moveId": "tide_pull"
       },
       {
-        "level": 32,
-        "moveId": "harbour_swell"
+        "level": 24,
+        "moveId": "water_jet"
       },
       {
         "level": 43,
-        "moveId": "noria_jet"
+        "moveId": "headlong_rush"
       }
     ],
     "platyflow": [
       {
+        "level": 9,
+        "moveId": "noria_jet"
+      },
+      {
         "level": 16,
         "moveId": "tide_pull"
       },
       {
-        "level": 32,
-        "moveId": "harbour_swell"
+        "level": 24,
+        "moveId": "water_jet"
       },
       {
         "level": 43,
-        "moveId": "noria_jet"
+        "moveId": "headlong_rush"
       }
     ],
     "marinedge": [
@@ -934,8 +1512,12 @@
         "moveId": "tide_pull"
       },
       {
+        "level": 24,
+        "moveId": "cross_guard"
+      },
+      {
         "level": 32,
-        "moveId": "harbour_swell"
+        "moveId": "noria_jet"
       },
       {
         "level": 43,

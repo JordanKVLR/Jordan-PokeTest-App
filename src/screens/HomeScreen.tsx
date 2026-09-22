@@ -12,6 +12,7 @@ import { ScreenBackground } from "./components/ScreenBackground";
 import { HoverTip } from "./components/HoverTip";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { colors } from "./theme";
+import { completionProgress } from "../game/trainers";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
@@ -20,6 +21,10 @@ export function HomeScreen({ navigation }: Props) {
   const party = useGameStore((s) => s.party);
   const battlesWon = useGameStore((s) => s.battlesWon);
   const medals = useGameStore((s) => s.medals);
+  const defeatedTrainerIds = useGameStore((s) => s.defeatedTrainerIds);
+  // Beating every trainer and every gym leader is the win condition, so the count belongs
+  // where the player checks their progress rather than only appearing once it is finished.
+  const progress = completionProgress(defeatedTrainerIds);
   const currency = useGameStore((s) => s.currency);
 
   const leadMember = party[0];
@@ -52,6 +57,11 @@ export function HomeScreen({ navigation }: Props) {
           </View>
         )}
         <Text style={styles.stat}>Battles won: {battlesWon}</Text>
+        <Text style={styles.stat} testID="completion-progress">
+          {progress.complete
+            ? "Every trainer and boss beaten — the islands are yours."
+            : `Trainers beaten: ${progress.trainersDefeated} of ${progress.trainersTotal}`}
+        </Text>
 
         {/* Medal track: four gyms across the run, shown filled as they are won. */}
         <View style={styles.medalRow}>

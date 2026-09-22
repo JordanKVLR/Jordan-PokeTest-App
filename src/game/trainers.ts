@@ -1,8 +1,9 @@
 import wildCreaturesData from "../data/wildCreatures.json";
 import { WildCreaturesFileSchema, type WildCreature } from "../data/schemas";
 import { generateZoneMap } from "./mapGenerator";
-import { getStage, type StageDef } from "./zoneProgression";
+import { STAGES, getStage, type StageDef } from "./zoneProgression";
 import { movesKnownAtLevel } from "./learnsetsRepo";
+import { spawnsInZone } from "./spawning";
 
 /**
  * Trainers are derived from the stage rather than hand-written, for the same reason the maps
@@ -74,7 +75,7 @@ function makeRng(seed: number): () => number {
 
 /** Creatures that suit this zone: its own biomes first, so a trainer fits where they stand. */
 function candidatesFor(stage: StageDef, typeFilter?: string): WildCreature[] {
-  const inBiome = wildCreatures.filter((c) => stage.biomes.includes(c.biome));
+  const inBiome = wildCreatures.filter((c) => spawnsInZone(c.biome, stage.biomes));
   if (!typeFilter) return inBiome.length > 0 ? inBiome : wildCreatures;
   const typed = wildCreatures.filter((c) => c.types.includes(typeFilter as WildCreature["types"][number]));
   return typed.length > 0 ? typed : inBiome;
@@ -180,4 +181,40 @@ export function trainerAt(zoneId: string, row: number, col: number): Trainer | u
 export function trainerCreatureMoves(speciesId: string, level: number): string[] {
   const species = wildCreatures.find((c) => c.id === speciesId);
   return movesKnownAtLevel(speciesId, level, species?.moveIds ?? ["tackle"]);
+}
+
+/**
+ * Every trainer in the game, across all twenty stages — the denominator for the win condition.
+ *
+ * Trainers are generated deterministically from the stage list, so this is a fixed set rather
+ * than something that grows as the player explores: the total is knowable from a fresh save,
+ * which is what lets the Home screen show "14 of 62" before you have met any of them.
+ */
+export function allTrainers(): Trainer[] {
+  return STAGES.flatMap((stage) => trainersForZone(stage.id));
+}
+
+export interface CompletionProgress {
+  trainersDefeated: number;
+  trainersTotal: number;
+  gymsDefeated: number;
+  gymsTotal: number;
+  /** True only once every trainer and every gym leader has been beaten. */
+  complete: boolean;
+}
+
+/** How far through "beat everyone" the player is. */
+export function completionProgress(defeatedTrainerIds: readonly string[]): CompletionProgress {
+  const defeated = new Set(defeatedTrainerIds);
+  const all = allTrainers();
+  const gyms = all.filter((t) => t.isGymLeader);
+  const trainersDefeated = all.filter((t) => defeated.has(t.id)).length;
+  const gymsDefeated = gyms.filter((t) => defeated.has(t.id)).length;
+  return {
+    trainersDefeated,
+    trainersTotal: all.length,
+    gymsDefeated,
+    gymsTotal: gyms.length,
+    complete: trainersDefeated === all.length && gymsDefeated === gyms.length,
+  };
 }

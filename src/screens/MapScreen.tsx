@@ -254,8 +254,9 @@ export function MapScreen({ navigation, route }: Props) {
     <ScreenBackground style={styles.container}>
       <Text style={styles.title}>{map.zoneName}</Text>
       <Text style={styles.subtitle}>
-        Stage {stage?.stage ?? 1} of {TOTAL_STAGES} · {biomeBlurb(stage?.biomes)}. The chapel
-        restores your party; trainers on the road must be beaten to pass.
+        Stage {stage?.stage ?? 1} of {TOTAL_STAGES} · {biomeBlurb(stage?.biomes)}. The road runs
+        clear to the next stage; the chapel restores your party. Beating every trainer and every
+        boss is how the run is won.
       </Text>
 
       <View style={[styles.gridWrap, { width: viewportWidth, height: viewportHeight }]}>

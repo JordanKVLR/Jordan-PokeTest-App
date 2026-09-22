@@ -12,6 +12,7 @@ import {
   type StarterLineName,
 } from "./creatureFactory";
 import type { BiomeType } from "./mapData";
+import { spawnsIn } from "./spawning";
 
 const regionalVariants = RegionalVariantsFileSchema.parse(regionalVariantsData).regionalVariants;
 const wildCreatures = WildCreaturesFileSchema.parse(wildCreaturesData).wildCreatures;
@@ -24,7 +25,34 @@ const LEGENDARY_MOVE_IDS: Record<string, string[]> = {
   aegilord: ["metal_claw", "tackle"],
   megalithos: ["rock_throw", "tackle"],
   siroccus: ["sand_blast", "tackle"],
+  aegilordan: ["cross_guard", "legion_charge", "metal_claw", "tackle"],
+  megalithron: ["trilithon_slam", "hypogeum_echo", "rock_throw", "tackle"],
+  siroccalis: ["signal_flare", "leviathan_coil", "gale_dive", "tackle"],
 };
+
+/**
+ * The level at which each evolved species comes into existence, keyed by its own id.
+ *
+ * Every creature now sits in an evolution line, which means the roster contains plenty of
+ * fully-grown forms. Without this they would roll on a stage-one table exactly as often as the
+ * base forms do, and a starting player would meet a level-4 Granmastru — a creature that is
+ * only supposed to exist at 42. A form is kept out of a zone's table until that zone's levels
+ * have nearly caught up with where its line evolves.
+ */
+const EVOLVES_AT = new Map<string, number>();
+for (const species of [...wildCreatures, ...regionalVariants, ...legendaries]) {
+  if (species.evolvesInto && species.evolvesAtLevel) {
+    EVOLVES_AT.set(species.evolvesInto, species.evolvesAtLevel);
+  }
+}
+
+/** How far below its evolution level a form may still appear, so tables don't switch over abruptly. */
+const EVOLVED_FORM_GRACE = 3;
+
+function availableAtLevel(speciesId: string, baseLevel: number): boolean {
+  const threshold = EVOLVES_AT.get(speciesId);
+  return threshold === undefined || baseLevel >= threshold - EVOLVED_FORM_GRACE;
+}
 
 /** Vanishingly rare relative to the rest of any biome's table (a single wild creature alone
  * outweighs all three legendaries combined) — this is the "you might see one, once in a long
@@ -72,7 +100,7 @@ export function buildBiomeEncounterTable(
   const table: EncounterOption[] = [];
 
   for (const wc of wildCreatures) {
-    if (wc.biome !== biome) continue;
+    if (!spawnsIn(wc.biome, biome) || !availableAtLevel(wc.id, baseLevel)) continue;
     table.push({
       weight: 5,
       build: (id) =>
@@ -89,7 +117,7 @@ export function buildBiomeEncounterTable(
   }
 
   for (const rv of regionalVariants) {
-    if (rv.biome !== biome) continue;
+    if (!spawnsIn(rv.biome, biome) || !availableAtLevel(rv.id, baseLevel)) continue;
     table.push({
       weight: 1,
       build: (id) =>
@@ -98,6 +126,8 @@ export function buildBiomeEncounterTable(
   }
 
   for (const legend of legendaries) {
+    // Awakened legendaries are reached by evolving the one you caught, never found loose.
+    if (EVOLVES_AT.has(legend.id)) continue;
     table.push({
       weight: LEGENDARY_ENCOUNTER_WEIGHT,
       build: (id) =>

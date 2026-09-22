@@ -5,7 +5,7 @@ import type { RootStackParamList } from "../navigation/types";
 import { useGameStore, type ExperienceGainResult } from "../state/gameStore";
 import type { BattleParticipant } from "../game/creatureFactory";
 import { buildBiomeEncounterTable, rollEncounter } from "../game/encounterTable";
-import { getTrainer, trainerCreatureMoves } from "../game/trainers";
+import { getTrainer, trainerCreatureMoves, completionProgress, type CompletionProgress } from "../game/trainers";
 import { buildParticipant } from "../game/creatureFactory";
 import { getDexEntry } from "../game/speciesCatalog";
 import { getZoneEncounterSettings } from "../game/zones";
@@ -38,6 +38,7 @@ import { LevelUpModal, type LevelUpRevealData } from "./components/LevelUpModal"
 import { EvolutionModal, type EvolutionRevealData } from "./components/EvolutionModal";
 import { MoveLearnModal, type MoveLearnPrompt } from "./components/MoveLearnModal";
 import { BlackoutOverlay } from "./components/BlackoutOverlay";
+import { VictoryOverlay } from "./components/VictoryOverlay";
 import { getMap, findTilePosition } from "../game/mapData";
 import { getZoneName } from "../game/zones";
 import { colors } from "./theme";
@@ -112,6 +113,8 @@ export function BattleScreen({ navigation, route }: Props) {
   const replacePartyMemberMove = useGameStore((s) => s.replacePartyMemberMove);
   const markTrainerDefeated = useGameStore((s) => s.markTrainerDefeated);
   const awardMedal = useGameStore((s) => s.awardMedal);
+  const defeatedTrainerIds = useGameStore((s) => s.defeatedTrainerIds);
+  const [completion, setCompletion] = useState<CompletionProgress | null>(null);
   const healFaintedPartyMembers = useGameStore((s) => s.healFaintedPartyMembers);
   const party = useGameStore((s) => s.party);
 
@@ -272,6 +275,13 @@ export function BattleScreen({ navigation, route }: Props) {
       if (trainer.medalId) {
         awardMedal(trainer.medalId);
         pushLog([`You earned the ${trainer.medalName}!`]);
+      }
+      // Beating everyone is the win condition. The store update above is async as far as this
+      // render is concerned, so count this trainer in by hand rather than reading it back.
+      const progress = completionProgress([...defeatedTrainerIds, trainer.id]);
+      if (progress.complete) {
+        setCompletion(progress);
+        pushLog(["There is no one left to fight."]);
       }
     }
 
@@ -999,6 +1009,14 @@ export function BattleScreen({ navigation, route }: Props) {
             pushLog([`${movePrompts[0].displayName} did not learn ${getMove(movePrompts[0].newMoveId).name}.`]);
             setMovePrompts((prev) => prev.slice(1));
           }}
+        />
+      )}
+
+      {completion && (
+        <VictoryOverlay
+          trainersBeaten={completion.trainersTotal}
+          medalsWon={completion.gymsTotal}
+          onContinue={() => setCompletion(null)}
         />
       )}
 

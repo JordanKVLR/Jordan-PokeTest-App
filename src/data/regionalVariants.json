@@ -3,28 +3,142 @@
     {
       "id": "ferrocane",
       "name": "Ferrocane",
-      "types": ["Electric", "Fire"],
+      "types": [
+        "Electric"
+      ],
       "flavor": "Fortress guard-hound, lightning-forged",
-      "baseStats": { "hp": 80, "atk": 90, "def": 70, "spatk": 95, "spdef": 75, "speed": 100 },
-      "moveIds": ["spark", "ember", "tackle"],
+      "baseStats": {
+        "hp": 80,
+        "atk": 90,
+        "def": 70,
+        "spatk": 95,
+        "spdef": 75,
+        "speed": 100
+      },
+      "moveIds": [
+        "spark",
+        "tackle"
+      ],
+      "biome": "rock",
+      "evolvesAtLevel": 30,
+      "evolvesInto": "ferrocanun"
+    },
+    {
+      "id": "ferrocanun",
+      "name": "Ferrocanun",
+      "types": [
+        "Electric",
+        "Fire"
+      ],
+      "flavor": "Fortress guard-hound, lightning-forged — grown into the forge itself.",
+      "baseStats": {
+        "hp": 107,
+        "atk": 122,
+        "def": 93,
+        "spatk": 129,
+        "spdef": 100,
+        "speed": 128
+      },
+      "moveIds": [
+        "arc_flash",
+        "spark",
+        "ember",
+        "tackle"
+      ],
       "biome": "rock"
     },
     {
       "id": "katakomba",
       "name": "Katakomba",
-      "types": ["Rock", "Ghost"],
+      "types": [
+        "Ghost"
+      ],
       "flavor": "Petrified catacomb sentinel",
-      "baseStats": { "hp": 95, "atk": 85, "def": 110, "spatk": 60, "spdef": 90, "speed": 40 },
-      "moveIds": ["rock_throw", "shadow_snap", "tackle"],
+      "baseStats": {
+        "hp": 95,
+        "atk": 85,
+        "def": 110,
+        "spatk": 60,
+        "spdef": 90,
+        "speed": 40
+      },
+      "moveIds": [
+        "shadow_snap",
+        "tackle"
+      ],
+      "biome": "rock",
+      "evolvesAtLevel": 29,
+      "evolvesInto": "katakombrun"
+    },
+    {
+      "id": "katakombrun",
+      "name": "Katakombrun",
+      "types": [
+        "Ghost",
+        "Rock"
+      ],
+      "flavor": "Has taken on the shape of the gallery it haunts, so the corridor and the creature can no longer be told apart.",
+      "baseStats": {
+        "hp": 127,
+        "atk": 116,
+        "def": 146,
+        "spatk": 82,
+        "spdef": 120,
+        "speed": 51
+      },
+      "moveIds": [
+        "catacomb_grasp",
+        "shadow_snap",
+        "rock_throw",
+        "tackle"
+      ],
       "biome": "rock"
     },
     {
       "id": "zavorra",
       "name": "Zavorra",
-      "types": ["Water", "Steel"],
+      "types": [
+        "Water"
+      ],
       "flavor": "Ballast-reef, shipwreck-adapted",
-      "baseStats": { "hp": 85, "atk": 75, "def": 105, "spatk": 65, "spdef": 95, "speed": 55 },
-      "moveIds": ["water_jet", "metal_claw", "tackle"],
+      "baseStats": {
+        "hp": 85,
+        "atk": 75,
+        "def": 105,
+        "spatk": 65,
+        "spdef": 95,
+        "speed": 55
+      },
+      "moveIds": [
+        "water_jet",
+        "tackle"
+      ],
+      "biome": "water",
+      "evolvesAtLevel": 31,
+      "evolvesInto": "zavorrun"
+    },
+    {
+      "id": "zavorrun",
+      "name": "Zavorrun",
+      "types": [
+        "Water",
+        "Steel"
+      ],
+      "flavor": "Ballast that was dumped in the Grand Harbour for four centuries and eventually stood up.",
+      "baseStats": {
+        "hp": 114,
+        "atk": 102,
+        "def": 140,
+        "spatk": 88,
+        "spdef": 126,
+        "speed": 70
+      },
+      "moveIds": [
+        "noria_jet",
+        "water_jet",
+        "metal_claw",
+        "tackle"
+      ],
       "biome": "water"
     }
   ]

@@ -25,6 +25,21 @@ export const TypeNameSchema = z.enum([
  * from src/game/) so src/data/ has no dependency on src/game/. */
 export const BiomeSchema = z.enum(["grass", "rock", "water", "sand"]);
 
+/**
+ * Where a creature spawns. Everything is tied to one terrain except the Normal types, which
+ * are the island's ordinary animals — the harbour cat, the rabbit hound, the rock dove — and
+ * belong to no single landscape, so they roll on every biome's table.
+ */
+export const SpawnBiomeSchema = z.enum(["grass", "rock", "water", "sand", "any"]);
+
+/** Evolution pointer shared by every species file: the level, and what it turns into. */
+const EvolutionFields = {
+  /** Level this creature evolves at. Omitted (or null) means it is a final form. */
+  evolvesAtLevel: z.number().int().positive().nullable().optional(),
+  /** Species id this evolves into; required whenever evolvesAtLevel is set. */
+  evolvesInto: z.string().nullable().optional(),
+};
+
 export const StatBlockSchema = z.object({
   hp: z.number().int().positive(),
   atk: z.number().int().positive(),
@@ -65,6 +80,7 @@ export const LegendarySchema = z.object({
   baseStats: StatBlockSchema,
   signatureMove: z.string(),
   storyFlagRequired: z.string(),
+  ...EvolutionFields,
 });
 
 export const LegendariesFileSchema = z.object({
@@ -79,6 +95,7 @@ export const RegionalVariantSchema = z.object({
   baseStats: StatBlockSchema,
   moveIds: z.array(z.string()).min(1).max(4),
   biome: BiomeSchema,
+  ...EvolutionFields,
 });
 
 export const RegionalVariantsFileSchema = z.object({
@@ -168,12 +185,9 @@ export const WildCreatureSchema = z.object({
   flavor: z.string(),
   baseStats: StatBlockSchema,
   moveIds: z.array(z.string()).min(1).max(4),
-  biome: BiomeSchema,
+  biome: SpawnBiomeSchema,
   era: EraSchema.default("wild"),
-  /** Level this creature evolves at. Omitted (or null) means it never evolves. */
-  evolvesAtLevel: z.number().int().positive().nullable().optional(),
-  /** Species id this evolves into; required whenever evolvesAtLevel is set. */
-  evolvesInto: z.string().nullable().optional(),
+  ...EvolutionFields,
 });
 
 export const LearnsetEntrySchema = z.object({
@@ -191,6 +205,7 @@ export const WildCreaturesFileSchema = z.object({
 });
 
 export type Biome = z.infer<typeof BiomeSchema>;
+export type SpawnBiome = z.infer<typeof SpawnBiomeSchema>;
 export type TypeName = z.infer<typeof TypeNameSchema>;
 export type StatBlock = z.infer<typeof StatBlockSchema>;
 export type StarterLine = z.infer<typeof StarterLineSchema>;

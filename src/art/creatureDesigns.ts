@@ -223,6 +223,80 @@ export const CREATURE_DESIGNS: Record<string, CreatureDesign> = {
   // ================================================================ british period
   pustaljon: { body: "golem", primary: "#cf4740", secondary: "#f2b3ad", pattern: "plates" },
   konvoj: { body: "vessel", primary: "#6b7a85", secondary: "#ccd8df", pattern: "waves", prop: "sail", propColor: "#b9c4cc" },
+  // ---------------------------------------------------------------- evolved native fauna
+  garrigarn: { body: "insect", primary: "#6d8c2c", secondary: "#c8dd8a", pattern: "plates", crest: "antennae", eyes: "fierce" },
+  qortaghan: { body: "golem", primary: "#c0a366", secondary: "#e8d5a6", pattern: "plates", eyes: "fierce", prop: "megalith", propColor: "#d6c299" },
+  xrobbraxx: { body: "golem", primary: "#6f6a62", secondary: "#a9a298", pattern: "plates", eyes: "glow" },
+  bulqajrun: { body: "biped", primary: "#a88b62", secondary: "#e0cba2", crest: "twinhorn", pattern: "plates", eyes: "fierce" },
+  luzzarju: { body: "aquatic", primary: "#4fa8cc", secondary: "#cdeefb", pattern: "waves", crest: "fin", tail: "fan" },
+  marsuppjun: { body: "mollusc", primary: "#5f8fa0", secondary: "#bfe0e8", pattern: "waves", eyes: "glow", prop: "spiralShell", propColor: "#9c7fa8" },
+  kalankros: { body: "aquatic", primary: "#4d7f96", secondary: "#c2dbe4", pattern: "plates", crest: "fin", eyes: "fierce" },
+  vurjenzu: { body: "avian", primary: "#79b8d8", secondary: "#dff2fb", crest: "plume", tail: "fan", eyes: "fierce" },
+  ondraguna: { body: "serpent", primary: "#2f6f8c", secondary: "#9fd2e6", pattern: "waves", crest: "twinhorn", eyes: "glow" },
+  ramlietan: { body: "quadruped", primary: "#c8a874", secondary: "#eeddb6", pattern: "plates", crest: "horn", eyes: "fierce" },
+  xemxarju: { body: "feline", primary: "#e08a3c", secondary: "#ffd9a2", crest: "plume", tail: "flame", eyes: "glow" },
+  dunkorrax: { body: "golem", primary: "#9a6b4a", secondary: "#c9a285", pattern: "plates", eyes: "fierce", prop: "malteseCross", propColor: "#b9c4cc" },
+  sirokkjun: { body: "avian", primary: "#7a6a52", secondary: "#d6c39a", pattern: "waves", crest: "plume", tail: "fan", eyes: "glow" },
+  ossijark: { body: "quadruped", primary: "#b0a288", secondary: "#e8dcc4", crest: "twinhorn", pattern: "plates", eyes: "glow" },
+
+  // ---------------------------------------------------------------- Normal: the island's own animals
+  qattusepp: { body: "feline", primary: "#c9bda8", secondary: "#f2ece0", crest: "ears", tail: "long", eyes: "round" },
+  qattusinja: { body: "feline", primary: "#d9c3b0", secondary: "#fbeee4", crest: "ears", tail: "long", eyes: "glow", prop: "lantern", propColor: "#f3d98a" },
+  kelbfenek: { body: "quadruped", primary: "#cf9a5e", secondary: "#f4dcb8", crest: "ears", tail: "long", eyes: "round" },
+  kelbsajjied: { body: "quadruped", primary: "#bd7c3f", secondary: "#f0cd9a", crest: "ears", tail: "long", eyes: "fierce", pattern: "stripes" },
+  hamiemu: { body: "avian", primary: "#a8b0bd", secondary: "#e6ebf2", crest: "none", tail: "fan", eyes: "round" },
+  hamiemarju: { body: "avian", primary: "#8d97a8", secondary: "#dce3ed", crest: "plume", tail: "fan", eyes: "fierce", pattern: "waves" },
+
+  // ---------------------------------------------------------------- Ice: sea frost and the tramuntana
+  silgina: { body: "blob", primary: "#a8dcea", secondary: "#eaf9ff", pattern: "waves", eyes: "sleepy" },
+  silgmewga: { body: "aquatic", primary: "#79c4dd", secondary: "#dff4fc", pattern: "waves", crest: "fin", tail: "fan", eyes: "glow" },
+  tramunt: { body: "blob", primary: "#bcd6e8", secondary: "#f0f8ff", crest: "none", eyes: "wide" },
+  tramuntarju: { body: "avian", primary: "#8ab6d4", secondary: "#e2f1fb", crest: "plume", tail: "fan", eyes: "glow", pattern: "waves" },
+
+  // ---------------------------------------------------------------- evolved temple builders
+  karkarotta: { body: "golem", primary: "#b9a37c", secondary: "#e4d7b8", pattern: "stripes", eyes: "fierce", prop: "megalith", propColor: "#cdb182" },
+  santwarjun: { body: "golem", primary: "#cbbf9a", secondary: "#f0e8cf", pattern: "mosaic", eyes: "glow", prop: "megalith", propColor: "#ded0a8" },
+  dorminarja: { body: "blob", primary: "#b493d4", secondary: "#e8dcf5", eyes: "sleepy", prop: "eyeOfOsiris", propColor: "#f0e3a8" },
+  ggantmastru: { body: "golem", primary: "#a89170", secondary: "#ddcda8", pattern: "plates", eyes: "fierce", crest: "twinhorn", prop: "megalith", propColor: "#c2ab82" },
+
+  // ---------------------------------------------------------------- evolved bronze age
+  bornaduru: { body: "golem", primary: "#6e6354", secondary: "#a89d89", pattern: "plates", eyes: "glow" },
+  kartruttan: { body: "quadruped", primary: "#9c8256", secondary: "#d4bf92", pattern: "stripes", crest: "horn", eyes: "fierce" },
+
+  // ---------------------------------------------------------------- evolved phoenician
+  bastimenta: { body: "vessel", primary: "#5d7f8c", secondary: "#c2d8e0", pattern: "waves", prop: "sail", propColor: "#c9a86a" },
+  ghajnsahha: { body: "blob", primary: "#7fb0c4", secondary: "#d8eef5", eyes: "glow", prop: "eyeOfOsiris", propColor: "#e8dca0" },
+
+  // ---------------------------------------------------------------- evolved roman
+  amforjun: { body: "mollusc", primary: "#b58a5e", secondary: "#e6cda8", pattern: "waves", prop: "amphora", propColor: "#c9a06a" },
+  laurentissu: { body: "biped", primary: "#6fa348", secondary: "#d2e8ab", crest: "none", eyes: "fierce", prop: "laurel", propColor: "#8fc45c" },
+  vipaulinu: { body: "serpent", primary: "#7a5a92", secondary: "#c8aedd", pattern: "stripes", eyes: "fierce" },
+
+  // ---------------------------------------------------------------- evolved arab period
+  larinjola: { body: "quadruped", primary: "#7fae4e", secondary: "#e8f0b8", crest: "none", tail: "leaf", eyes: "round", prop: "citrus", propColor: "#f0a83c" },
+  sienjarja: { body: "golem", primary: "#6f93a0", secondary: "#c8dfe6", pattern: "plates", eyes: "glow", prop: "waterwheel", propColor: "#b08f5e" },
+
+  // ---------------------------------------------------------------- evolved order of st john
+  falkunjier: { body: "avian", primary: "#8f9aa8", secondary: "#dce3eb", crest: "plume", tail: "fan", eyes: "fierce", prop: "knightHelm", propColor: "#c4ccd4" },
+
+  // ---------------------------------------------------------------- evolved great siege
+  jannisarju: { body: "biped", primary: "#c96a3a", secondary: "#f5c795", crest: "plume", eyes: "fierce", prop: "turban", propColor: "#e8dcc0" },
+  bombardun: { body: "golem", primary: "#5f5a52", secondary: "#a8a096", pattern: "plates", eyes: "glow", prop: "cannon", propColor: "#3f3a34" },
+  hilaluna: { body: "avian", primary: "#464258", secondary: "#a29ebd", crest: "plume", tail: "fan", eyes: "glow", prop: "crescent", propColor: "#f0e2a0" },
+
+  // ---------------------------------------------------------------- evolved british period
+  pustaljunar: { body: "quadruped", primary: "#d8c04a", secondary: "#f7ecb0", pattern: "stripes", crest: "antennae", eyes: "fierce", prop: "propeller", propColor: "#b9c4cc" },
+  konvojarma: { body: "vessel", primary: "#56656f", secondary: "#bdc9d2", pattern: "waves", prop: "cannon", propColor: "#3a4148" },
+
+  // ---------------------------------------------------------------- evolved regional variants
+  ferrocanun: { body: "feline", primary: "#e09a28", secondary: "#ffdc94", crest: "ears", tail: "flame", eyes: "glow", pattern: "stripes" },
+  katakombrun: { body: "golem", primary: "#6a6478", secondary: "#b4aec4", pattern: "plates", eyes: "glow" },
+  zavorrun: { body: "vessel", primary: "#4f6a78", secondary: "#b4cdd8", pattern: "plates", prop: "sail", propColor: "#9aa8b2" },
+
+  // ---------------------------------------------------------------- awakened legendaries
+  aegilordan: { body: "biped", primary: "#8f9dae", secondary: "#e4ecf5", crest: "plume", eyes: "glow", prop: "malteseCross", propColor: "#f2ead8" },
+  megalithron: { body: "golem", primary: "#b8a77e", secondary: "#e8dcba", pattern: "mosaic", eyes: "glow", prop: "megalith", propColor: "#d4c096" },
+  siroccalis: { body: "serpent", primary: "#c2a05e", secondary: "#f0dfae", pattern: "waves", crest: "twinhorn", tail: "fan", eyes: "glow" },
 };
 
 /** Body archetype guessed from a type, for any species without an authored design. */

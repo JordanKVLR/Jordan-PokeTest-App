@@ -1,4 +1,8 @@
+import wildCreaturesData from "../../data/wildCreatures.json";
+import { WildCreaturesFileSchema } from "../../data/schemas";
 import { buildBiomeEncounterTable, rollEncounter, type EncounterOption } from "../encounterTable";
+
+const wildCreatures = WildCreaturesFileSchema.parse(wildCreaturesData).wildCreatures;
 
 describe("buildBiomeEncounterTable — per-biome pools", () => {
   it("only includes species tagged with the requested biome (plus the universal legendary tier)", () => {
@@ -23,11 +27,32 @@ describe("buildBiomeEncounterTable — per-biome pools", () => {
       expect(common.length).toBeGreaterThan(0);
       return new Set(common.map((o) => o.build("probe").creature.speciesId));
     });
-    // No two biomes should share any common species — each is a genuinely distinct pool.
+    // Biomes share only the Normal-type creatures, which are deliberately at home anywhere
+    // (see spawning.ts). Everything else must be exclusive to its own terrain.
+    const anywhere = new Set(
+      wildCreatures.filter((c) => c.biome === "any").map((c) => c.id)
+    );
+    expect(anywhere.size).toBeGreaterThan(0);
     for (let i = 0; i < commonIdsByBiome.length; i++) {
       for (let j = i + 1; j < commonIdsByBiome.length; j++) {
-        const overlap = [...commonIdsByBiome[i]].filter((id) => commonIdsByBiome[j].has(id));
+        const overlap = [...commonIdsByBiome[i]]
+          .filter((id) => commonIdsByBiome[j].has(id))
+          .filter((id) => !anywhere.has(id));
         expect(overlap).toEqual([]);
+      }
+    }
+  });
+
+  it("offers the Normal-type wanderers on every biome's table", () => {
+    // High enough that the evolved Normal forms have come of age too (see EVOLVES_AT).
+    const config = { baseLevel: 40, levelSpread: 2, legendaryMinLevel: 50 };
+    const anywhere = wildCreatures.filter((c) => c.biome === "any").map((c) => c.id);
+    for (const biome of ["grass", "rock", "water", "sand"] as const) {
+      const ids = new Set(
+        buildBiomeEncounterTable(biome, "Water", config).map((o) => o.build("probe").creature.speciesId)
+      );
+      for (const id of anywhere) {
+        expect({ biome, id, offered: ids.has(id) }).toEqual({ biome, id, offered: true });
       }
     }
   });

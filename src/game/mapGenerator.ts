@@ -88,10 +88,18 @@ export function generateZoneMap(stage: StageDef): GeneratedMap {
     }
   }
 
-  // The carved route: a drunken walk rightwards from the west edge to the east edge. Every
-  // tile it touches becomes path, which is what makes the zone traversable by construction.
-  const startRow = 3 + Math.floor(rng() * (HEIGHT - 6));
-  const endRow = 3 + Math.floor(rng() * (HEIGHT - 6));
+  // The carved route: a two-lane road running west to east, bending only gently. It used to be
+  // a drunken walk, which made every zone a small maze — you could not see where the exit was
+  // and had to wander to find it. A player who wants to push on to the next stage should be
+  // able to see the way out and take it, so the road now holds close to the middle of the map,
+  // moves at most one row per column, and is two tiles wide for its whole length. Path tiles
+  // carry no biome, so the road is also the one line through the zone that spawns no wild
+  // encounters: taking it is genuinely the fast way through.
+  const midRow = Math.floor(HEIGHT / 2);
+  const drift = () => Math.floor(rng() * 3) - 1;
+  const startRow = Math.min(HEIGHT - 3, Math.max(2, midRow + drift()));
+  const endRow = Math.min(HEIGHT - 3, Math.max(2, midRow + drift()));
+
   const route: Array<{ row: number; col: number }> = [];
   let r = startRow;
   for (let c = 1; c <= WIDTH - 2; c++) {
@@ -99,13 +107,13 @@ export function generateZoneMap(stage: StageDef): GeneratedMap {
     const target = Math.round(startRow + (endRow - startRow) * progress);
     if (r < target) r++;
     else if (r > target) r--;
-    else if (rng() < 0.35) r += rng() < 0.5 ? 1 : -1;
-    r = Math.min(HEIGHT - 2, Math.max(1, r));
+    r = Math.min(HEIGHT - 3, Math.max(1, r));
 
     grid[r][c] = "path";
+    // The second lane is always carved, never occasionally — a road that narrows to one tile
+    // is a road a single obstacle can cork.
+    grid[r + 1][c] = "path";
     route.push({ row: r, col: c });
-    // Widen occasionally so the route reads as a road rather than a one-tile corridor.
-    if (rng() < 0.4 && r + 1 < HEIGHT - 1) grid[r + 1][c] = "path";
   }
 
   // Connect the west edge down to wherever the walk actually began, then stamp the entrance
@@ -130,23 +138,39 @@ export function generateZoneMap(stage: StageDef): GeneratedMap {
     grid[Math.min(HEIGHT - 2, healAnchor.row + 1)][healAnchor.col] = "heal";
   }
 
-  // Trainers stand on the road itself, spaced out so they aren't back-to-back.
+  // Trainers wait at the roadside rather than standing in the middle of it. Beating every one
+  // of them is a win condition, so they all have to be reachable — but blocking the road with
+  // them would mean the only way to the next stage was through every battle in order, and a
+  // player who wants to run the route should be able to. They stand one tile off the road,
+  // in plain sight, and you walk into them when you want the fight.
   const trainerSpots: Array<{ row: number; col: number }> = [];
   const wanted = 2 + (stage.stage % 3 === 0 ? 2 : 1);
   const spacing = Math.floor(route.length / (wanted + 1));
+  const isFree = (row: number, col: number) => {
+    const tile = grid[row]?.[col];
+    if (tile === undefined || tile === "tree" || tile === "entrance" || tile === "exit" || tile === "heal") return false;
+    return !trainerSpots.some((s) => s.row === row && s.col === col);
+  };
   for (let i = 1; i <= wanted; i++) {
-    const spot = route[Math.min(route.length - 2, i * spacing)];
-    if (!spot) continue;
-    const taken = trainerSpots.some((s) => s.row === spot.row && s.col === spot.col);
-    const isGate = grid[spot.row][spot.col] === "entrance" || grid[spot.row][spot.col] === "exit";
-    if (!taken && !isGate) trainerSpots.push({ ...spot });
+    const anchor = route[Math.min(route.length - 3, i * spacing)];
+    if (!anchor) continue;
+    // Above the road, then below it, then on the far lane — the first tile that will take them.
+    const candidates = [
+      { row: anchor.row - 1, col: anchor.col },
+      { row: anchor.row + 2, col: anchor.col },
+      { row: anchor.row + 1, col: anchor.col },
+    ];
+    const spot = candidates.find((c) => isFree(c.row, c.col));
+    if (spot) trainerSpots.push(spot);
   }
 
-  // The gym leader blocks the last stretch, so the exit can't be reached around them.
+  // The gym leader is the exception: they stand in the road itself, right before the exit, so
+  // you cannot miss them on the way out. They are not a wall — every tile that isn't a tree is
+  // walkable, so nobody is ever physically sealed in — the gate is the medal check the next
+  // stage's entrance runs (see medalRequiredToEnter). Standing here just means the player meets
+  // the boss at the point where the medal starts to matter.
   const gymSpot = stage.gym ? { ...route[route.length - 2] } : null;
-  if (gymSpot) {
-    grid[gymSpot.row][gymSpot.col] = "path";
-  }
+  if (gymSpot) grid[gymSpot.row][gymSpot.col] = "path";
 
   return { rows: grid, playerStart: entrance, trainerSpots, gymSpot };
 }

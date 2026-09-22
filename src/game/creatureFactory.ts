@@ -1,8 +1,12 @@
 import startersData from "../data/starters.json";
 import wildCreaturesData from "../data/wildCreatures.json";
+import regionalVariantsData from "../data/regionalVariants.json";
+import legendariesData from "../data/legendaries.json";
 import {
   StartersFileSchema,
   WildCreaturesFileSchema,
+  RegionalVariantsFileSchema,
+  LegendariesFileSchema,
   type StarterLine,
   type StatBlock,
   type TypeName,
@@ -14,6 +18,28 @@ import { effectiveStats } from "./progression";
 
 const starters = StartersFileSchema.parse(startersData).starters;
 const wildCreatures = WildCreaturesFileSchema.parse(wildCreaturesData).wildCreatures;
+const regionalVariants = RegionalVariantsFileSchema.parse(regionalVariantsData).regionalVariants;
+const legendaries = LegendariesFileSchema.parse(legendariesData).legendaries;
+
+/** The one shape evolution cares about, whatever file a species actually lives in. */
+interface EvolvableSpecies {
+  id: string;
+  name: string;
+  types: TypeName[];
+  baseStats: StatBlock;
+  evolvesAtLevel?: number | null;
+  evolvesInto?: string | null;
+}
+
+/**
+ * Every non-starter species in one lookup. Wild creatures, regional variants and legendaries
+ * are stored in separate files because the Codex groups them separately, but an evolution is
+ * an evolution — a legendary reaching its awakened form goes through exactly the same path a
+ * quarry beetle does, so they share one index rather than three near-identical code paths.
+ */
+const SPECIES_INDEX = new Map<string, EvolvableSpecies>(
+  [...wildCreatures, ...regionalVariants, ...legendaries].map((species) => [species.id, species])
+);
 
 export type StarterLineName = "Grass" | "Fire" | "Water";
 
@@ -95,8 +121,8 @@ function findStarterStage(speciesId: string): { line: StarterLine; stageIndex: n
   return null;
 }
 
-function findWildCreature(speciesId: string) {
-  return wildCreatures.find((w) => w.id === speciesId) ?? null;
+function findSpecies(speciesId: string): EvolvableSpecies | null {
+  return SPECIES_INDEX.get(speciesId) ?? null;
 }
 
 /** The species' own default display name (used to detect whether a party member has been given a
@@ -105,7 +131,7 @@ function findWildCreature(speciesId: string) {
 export function defaultDisplayNameForSpecies(speciesId: string): string | null {
   const starter = findStarterStage(speciesId);
   if (starter) return starter.line.stages[starter.stageIndex].name;
-  return findWildCreature(speciesId)?.name ?? null;
+  return findSpecies(speciesId)?.name ?? null;
 }
 
 /**
@@ -113,8 +139,9 @@ export function defaultDisplayNameForSpecies(speciesId: string): string | null {
  * evolve here — a species with no line, an already-final stage, or a level below the threshold.
  *
  * Two kinds of line feed this: the three starter lines (ordered stages in starters.json) and
- * wild creatures that point at their next form with evolvesAtLevel/evolvesInto. Callers should
- * loop this (see party.ts) since a large level jump can cross more than one threshold at once.
+ * everything else, which points at its next form with evolvesAtLevel/evolvesInto. Callers
+ * should loop this (see party.ts) since a large level jump can cross more than one threshold
+ * at once.
  */
 export function checkEvolution(speciesId: string, level: number): EvolutionCandidate | null {
   const starter = findStarterStage(speciesId);
@@ -132,14 +159,14 @@ export function checkEvolution(speciesId: string, level: number): EvolutionCandi
     };
   }
 
-  const wild = findWildCreature(speciesId);
-  if (!wild || !wild.evolvesAtLevel || !wild.evolvesInto) return null;
-  if (level < wild.evolvesAtLevel) return null;
-  const next = findWildCreature(wild.evolvesInto);
+  const species = findSpecies(speciesId);
+  if (!species || !species.evolvesAtLevel || !species.evolvesInto) return null;
+  if (level < species.evolvesAtLevel) return null;
+  const next = findSpecies(species.evolvesInto);
   if (!next) {
     // Data error rather than a silent no-op: an evolvesInto pointing nowhere means the line is
     // broken, and a creature that can never finish evolving is worth failing loudly over.
-    throw new Error(`Creature "${speciesId}" evolves into unknown species "${wild.evolvesInto}"`);
+    throw new Error(`Creature "${speciesId}" evolves into unknown species "${species.evolvesInto}"`);
   }
   return {
     nextSpeciesId: next.id,
