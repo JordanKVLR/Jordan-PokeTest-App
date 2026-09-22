@@ -166,7 +166,14 @@ export function BattleScreen({ navigation, route }: Props) {
   const fsm = fsmRef.current;
 
   const [snapshot, setSnapshot] = useState<BattleSnapshot | null>(() => (fsm ? snapshotFrom(fsm.getContext()) : null));
-  const [log, setLog] = useState<string[]>([`A wild ${enemy.displayName} appeared!`]);
+  const [log, setLog] = useState<string[]>(() =>
+    route.params.trainerId
+      ? [
+          getTrainer(route.params.trainerId)?.intro ?? "A challenger appears!",
+          `They send out ${enemyTeam[0]?.displayName ?? "a creature"}!`,
+        ]
+      : [`A wild ${enemy.displayName} appeared!`]
+  );
   const [outcome, setOutcome] = useState<Outcome>(null);
   const [rewards, setRewards] = useState<BattleRewards | null>(null);
   const [showParty, setShowParty] = useState(false);
@@ -306,7 +313,7 @@ export function BattleScreen({ navigation, route }: Props) {
     if (creature.id === playerActiveId) {
       return party.find((m) => m.uid === creature.id)?.displayName ?? "Your creature";
     }
-    return `Wild ${enemy.displayName}`;
+    return foeLabel(enemy.displayName);
   }
 
   /** Extra log lines describing what a move actually did — damage dealt, a miss,
@@ -670,7 +677,7 @@ export function BattleScreen({ navigation, route }: Props) {
         biome={biome}
         enemy={{
           speciesId: enemy.creature.speciesId,
-          name: `Wild ${enemy.displayName}`,
+          name: foeLabel(enemy.displayName),
           types: enemy.creature.types,
           level: enemy.creature.level,
           hp: snapshot.enemyHp,
@@ -831,20 +838,29 @@ export function BattleScreen({ navigation, route }: Props) {
             <Text style={styles.cruxHint}>{applicableItems.length > 0 ? "heal/level up — costs the turn" : "no usable items"}</Text>
           </Pressable>
         </HoverTip>
-        <HoverTip style={styles.fleeButtonHoverWrap} text="Flee the encounter immediately. No reward, but no penalty either. Keyboard: R.">
+        <HoverTip
+          style={styles.fleeButtonHoverWrap}
+          text={
+            isTrainerBattle
+              ? "You can't walk away from a trainer's challenge — win it or black out."
+              : "Flee the encounter immediately. No reward, but no penalty either. Keyboard: R."
+          }
+        >
           <Pressable
             testID="flee-button"
             onPress={handleFlee}
-            disabled={actionsDisabled}
+            disabled={actionsDisabled || isTrainerBattle}
             style={({ pressed }) => [
               styles.moveButton,
               styles.fleeButton,
-              actionsDisabled && styles.moveButtonDisabled,
+              (actionsDisabled || isTrainerBattle) && styles.moveButtonDisabled,
               pressed && styles.moveButtonPressed,
             ]}
           >
-            <Text style={styles.moveName}>Run Away</Text>
-            <Text style={styles.cruxHint}>flee the encounter</Text>
+            <Text style={styles.moveName}>{isTrainerBattle ? "Can't Run" : "Run Away"}</Text>
+            <Text style={styles.cruxHint}>
+              {isTrainerBattle ? "no walking away from a challenge" : "flee the encounter"}
+            </Text>
           </Pressable>
         </HoverTip>
       </View>
