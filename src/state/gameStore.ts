@@ -1,4 +1,5 @@
 import { moveItem } from "../game/reorder";
+import { getDexEntry } from "../game/speciesCatalog";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -25,7 +26,7 @@ const SAVE_KEY = "melita-save";
  * so the migration below credits them with every stage up to the one they are standing in —
  * the route is linear, so that is exactly the set they must have walked through.
  */
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 const STARTING_ZONE_ID = "melita_woods";
 const DEFAULT_PLAYER_NAME = "Traveler";
 const MAX_PARTY_SIZE = 6;
@@ -35,6 +36,23 @@ const STARTING_CURRENCY = 50;
  * Every stage a pre-v2 save must already have passed through. Stages only open in order, so
  * a player standing in stage N walked through 1..N. A save with no party never started.
  */
+/**
+ * Party members carry their own copy of their base stats. When the starters were rebalanced
+ * (save v3), a starter already in someone's party would have kept the old, weaker numbers —
+ * so bring every starter up to what its species now has, keeping its HP at the same fraction.
+ */
+export function refreshStarterStats(party: PartyMember[]): PartyMember[] {
+  return party.map((member) => {
+    const entry = getDexEntry(member.speciesId);
+    if (entry?.category !== "starter" || !entry.stats) return member;
+    const oldMax = partyMemberStats(member).hp;
+    const updated = { ...member, baseStats: entry.stats };
+    const newMax = partyMemberStats(updated).hp;
+    const currentHp = member.currentHp <= 0 ? 0 : Math.max(1, Math.round((member.currentHp / oldMax) * newMax));
+    return { ...updated, currentHp: Math.min(newMax, currentHp) };
+  });
+}
+
 export function stagesReachedBy(currentZoneId: string | undefined, partySize: number): string[] {
   if (partySize === 0) return [];
   const current = getStage(currentZoneId ?? STARTING_ZONE_ID)?.stage ?? 1;
@@ -376,6 +394,7 @@ export const useGameStore = create<GameState>()(
       migrate: (persisted, fromVersion) => {
         const save = (persisted ?? {}) as { currentZoneId?: string; party?: unknown[]; visitedStageIds?: string[] };
         if (fromVersion < 2) save.visitedStageIds = stagesReachedBy(save.currentZoneId, save.party?.length ?? 0);
+        if (fromVersion < 3 && Array.isArray(save.party)) save.party = refreshStarterStats(save.party as PartyMember[]);
         return save as unknown as GameState;
       },
       onRehydrateStorage: () => (state) => {

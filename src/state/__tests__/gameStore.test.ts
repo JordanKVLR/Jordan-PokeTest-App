@@ -1,4 +1,6 @@
-import { useGameStore } from "../gameStore";
+import { refreshStarterStats, useGameStore } from "../gameStore";
+import { effectiveStats } from "../../game/progression";
+import startersData from "../../data/starters.json";
 import type { PartyMember } from "../../game/party";
 import { getMove } from "../../game/movesRepo";
 
@@ -206,5 +208,34 @@ describe("gameStore", () => {
       useGameStore.getState().spendPp("a", "tackle");
       expect(useGameStore.getState().party[0].movePp?.tackle).toBe(0);
     });
+  });
+});
+
+describe("refreshStarterStats (save v3)", () => {
+  const OLD_CALFLEAF = { hp: 55, atk: 68, def: 59, spatk: 40, spdef: 56, speed: 37 };
+  const newCalfleaf = startersData.starters[0].stages[0].baseStats;
+
+  it("gives a starter saved before the rebalance its current stats, keeping its HP fraction", () => {
+    const oldMax = effectiveStats(OLD_CALFLEAF, 10).hp;
+    const member: PartyMember = {
+      ...makeMember("s"),
+      speciesId: "calfleaf",
+      level: 10,
+      baseStats: OLD_CALFLEAF,
+      currentHp: Math.round(oldMax / 2),
+      sourceCategory: "starter",
+    };
+    const [refreshed] = refreshStarterStats([member]);
+    const newMax = effectiveStats(newCalfleaf, 10).hp;
+    expect(refreshed.baseStats).toEqual(newCalfleaf);
+    expect(Math.abs(refreshed.currentHp - newMax / 2)).toBeLessThanOrEqual(1);
+  });
+
+  it("leaves fainted starters fainted and other creatures alone", () => {
+    const fainted = { ...makeMember("f"), speciesId: "calfleaf", baseStats: OLD_CALFLEAF, currentHp: 0 };
+    const wild = makeMember("w");
+    const [a, b] = refreshStarterStats([fainted, wild]);
+    expect(a.currentHp).toBe(0);
+    expect(b).toBe(wild);
   });
 });
