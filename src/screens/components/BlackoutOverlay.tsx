@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Animated, Modal, Pressable, StyleSheet, Text } from "react-native";
+import { useTapAnywhere } from "./useTapAnywhere";
 import { useI18n } from "../../i18n";
 
 /**
@@ -16,6 +17,7 @@ export function BlackoutOverlay({
   onContinue: () => void;
 }) {
   const { t } = useI18n();
+  const tapAnywhere = useTapAnywhere(onContinue);
   const fade = useRef(new Animated.Value(0)).current;
   const textFade = useRef(new Animated.Value(0)).current;
 
@@ -29,16 +31,18 @@ export function BlackoutOverlay({
   return (
     <Modal visible transparent animationType="none" onRequestClose={() => {}}>
       <Animated.View testID="blackout-overlay" style={[styles.backdrop, { opacity: fade }]}>
-        <Animated.View style={{ opacity: textFade, alignItems: "center" }}>
+        <Pressable testID="blackout-backdrop" accessibilityRole="button" onPress={tapAnywhere} style={StyleSheet.absoluteFill} />
+        <Animated.View pointerEvents="box-none" style={{ opacity: textFade, alignItems: "center" }}>
           <Text style={styles.title}>{t("blackout.title")}</Text>
           <Text style={styles.body}>{t("blackout.body", { zone: zoneName })}</Text>
           <Pressable
             testID="blackout-continue"
-            onPress={onContinue}
+            onPress={tapAnywhere}
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
           >
             <Text style={styles.buttonText}>{t("blackout.wake")}</Text>
           </Pressable>
+          <Text style={styles.hint}>{t("common.tapAnywhere")}</Text>
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -46,6 +50,11 @@ export function BlackoutOverlay({
 }
 
 const styles = StyleSheet.create({
+  hint: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    marginTop: 14,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: "#000000",

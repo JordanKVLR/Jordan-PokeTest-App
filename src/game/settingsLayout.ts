@@ -44,7 +44,7 @@ export const SETTINGS_SECTIONS: { title: StringKey; rows: Row[] }[] = [
   {
     title: "settings.section.battle",
     rows: [
-      { kind: "choice", key: "battlePace", options: ["tap", "standard", "quick"], describeOptions: true },
+      { kind: "choice", key: "battlePace", options: ["tap", "standard", "quick", "fastest"], describeOptions: true },
       { kind: "choice", key: "textSpeed", options: ["slow", "normal", "fast"] },
       { kind: "choice", key: "trainerIntros", options: ["full", "brief"] },
     ],

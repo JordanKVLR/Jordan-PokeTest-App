@@ -102,6 +102,23 @@ describe("gameStore", () => {
     });
   });
 
+  describe("reorderParty", () => {
+    it("moves a member from one slot to another, the Party screen's drag and drop", () => {
+      useGameStore.setState({ party: [makeMember("a"), makeMember("b"), makeMember("c"), makeMember("d")] });
+      useGameStore.getState().reorderParty(3, 1);
+      expect(useGameStore.getState().party.map((m) => m.uid)).toEqual(["a", "d", "b", "c"]);
+      useGameStore.getState().reorderParty(0, 3);
+      expect(useGameStore.getState().party.map((m) => m.uid)).toEqual(["d", "b", "c", "a"]);
+    });
+
+    it("leaves the party untouched when dropped back where it started", () => {
+      const party = [makeMember("a"), makeMember("b")];
+      useGameStore.setState({ party });
+      useGameStore.getState().reorderParty(1, 1);
+      expect(useGameStore.getState().party).toBe(party);
+    });
+  });
+
   describe("setMainPartyMember", () => {
     it("moves the given member to the front, preserving the relative order of the rest", () => {
       useGameStore.setState({ party: [makeMember("a"), makeMember("b"), makeMember("c")] });

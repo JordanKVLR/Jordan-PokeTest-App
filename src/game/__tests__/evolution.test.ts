@@ -1,10 +1,12 @@
+import startersData from "../../data/starters.json";
 import { buildParticipant, checkEvolution, defaultDisplayNameForSpecies } from "../creatureFactory";
 import { addExperience, applyLevelUp, partyMemberFromParticipant, type PartyMember } from "../party";
 import { effectiveStats } from "../progression";
 
-const CALFLEAF_STATS = { hp: 55, atk: 68, def: 59, spatk: 40, spdef: 56, speed: 37 };
-const VINEHORN_STATS = { hp: 72, atk: 90, def: 78, spatk: 53, spdef: 74, speed: 49 };
-const MOSSTAUR_STATS = { hp: 88, atk: 110, def: 95, spatk: 65, spdef: 90, speed: 60 };
+const GRASS_STAGES = startersData.starters.find((line) => line.line === "Grass")!.stages;
+const CALFLEAF_STATS = GRASS_STAGES[0].baseStats;
+const VINEHORN_STATS = GRASS_STAGES[1].baseStats;
+const MOSSTAUR_STATS = GRASS_STAGES[2].baseStats;
 
 function makeMember(overrides: Partial<PartyMember> = {}): PartyMember {
   return {

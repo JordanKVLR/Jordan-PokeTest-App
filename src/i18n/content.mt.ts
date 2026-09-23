@@ -240,6 +240,15 @@ export const MT_SIGNATURES: Record<string, string> = {
 };
 
 export const MT_FLAVOR: Record<string, string> = {
+  calfleaf: "Għoġol b'saħħtu bis-silla tikber tul daharu, imrobbi fl-għelieqi terrazzati madwar Ħaż-Żebbuġ. Il-bdiewa jgħidu li għalqa fejn raqad qatt ma tonqos.",
+  vinehorn: "Qrunu kibru f'dwieli mgħawġa tal-ħarrub u tat-tin. Wara l-maltemp tax-xitwa, jerġa' jqiegħed il-ħitan tas-sejjieħ li waqgħu f'posthom.",
+  mosstaur: "Barri kbir b'dahru miksi bil-ħażiż, antik daqs il-ġebel tat-tempji. Jattakka bil-piż ta' megalitu, u jingħad li l-bennejja ta' Ġgantija għollew il-ħitan tagħhom bis-saħħa tiegħu.",
+  pharawoof: "Ġeru tal-kelb tal-fenek b'ġamra tixgħel f'tarf denbu. Bħall-klieb tal-gżira stess, widnejh jiħmarru meta jkun eċitat.",
+  infernux: "Widnejh jaqbdu b'fjamma kwieta li tara 'l bogħod aktar minn għajnejh. In-negozjanti Feniċi kienu jemmnu li jxomm maltempata tlitt ijiem qabel ma tfaqqa'.",
+  pyrollis: "Kelb twil u indurat li jaqra dak li ġej fit-tbexbix tan-nar tiegħu stess. L-orakli ta' Tas-Silġ kienu jżommu wieħed ħdejn l-artal.",
+  duckling: "Papra żgħira u tonda li tgħum fil-melħiet mas-sebħ, tiekol il-gambli tal-melħ u tgħajjat lis-sajjieda.",
+  platyflow: "Għawwiem b'munqar wiesa' li jirkeb il-mewġ tal-port bħal luzzu miżbugħ, u jmexxi b'denbu ċatt.",
+  marinedge: "Ir-rix tiegħu webbes f'buq tal-pjanċi b'rostru fil-munqar, bħall-galeri tal-Kavallieri. Iħares il-bokka tal-Port il-Kbir.",
   fossary:
     "Ħanfusa b'qoxra tal-garigue li tirgħa fl-imsaġar tal-Buskett; jgħidu li l-ħotob fuq daharha jirriflettu l-megaliti.",
   garrigarn:

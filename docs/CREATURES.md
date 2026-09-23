@@ -1,4 +1,4 @@
-# Creature Roster — A Maltese Tale
+# Creature Roster — Chivalry & Antiquity
 
 **106 species.** Generated from `src/data/*.json` and from the live encounter tables,
 so the availability column is what the game actually rolls, not an estimate. The rules below
@@ -11,7 +11,9 @@ one or two types, never three, and never two that contradict each other (see
 **Stages** is which of the 20 stages a creature can be found wild in. It falls out of two
 rules: the stage's two biomes have to include the creature's own (Normal types carry "any" and
 roll everywhere), and an evolved form is held back until the stage's levels come within 3 of
-where its line evolves — so you never meet a fully-grown creature on the first road.
+where its line evolves — so you never meet a fully-grown creature on the first road. A first
+form that out-stats a starter's first stage (base total 430) is held back too, one level for
+every 5 points over, so the opening roads are not full of creatures that outclass your partner.
 
 **BST** is the base stat total.
 
@@ -44,15 +46,15 @@ does not need three playthroughs. Stages 2 and 3 are never found wild; you evolv
 
 | Line | Creature | Types | BST | Evolves | Becomes | Stages |
 |---|---|---|---|---|---|---|
-| Grass | Calfleaf | Grass | 315 | Lv. 16 | Vinehorn | 1, 4–5, 7, 9, 11, 13, 15, 17, 19 |
-| Grass | Vinehorn | Grass | 416 | Lv. 36 | Moss-taur | — |
-| Grass | Moss-taur | Grass/Ground | 508 | — | — | — |
-| Fire | Pharawoof | Fire | 329 | Lv. 17 | Infernux | 1, 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
-| Fire | Infernux | Fire/Psychic | 438 | Lv. 34 | Pyrollis | — |
-| Fire | Pyrollis | Fire/Psychic | 548 | — | — | — |
-| Water | Duckling | Water | 324 | Lv. 15 | Platyflow | 2–3, 6–7, 9–10, 12, 14, 16, 19–20 |
-| Water | Platyflow | Water | 432 | Lv. 33 | Marinedge | — |
-| Water | Marinedge | Water/Steel | 540 | — | — | — |
+| Grass | Calfleaf | Grass | 430 | Lv. 16 | Vinehorn | 1, 4–5, 7, 9, 11, 13, 15, 17, 19 |
+| Grass | Vinehorn | Grass | 535 | Lv. 36 | Moss-taur | — |
+| Grass | Moss-taur | Grass/Ground | 625 | — | — | — |
+| Fire | Pharawoof | Fire | 430 | Lv. 17 | Infernux | 1, 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
+| Fire | Infernux | Fire/Psychic | 535 | Lv. 34 | Pyrollis | — |
+| Fire | Pyrollis | Fire/Psychic | 625 | — | — | — |
+| Water | Duckling | Water | 430 | Lv. 15 | Platyflow | 2–3, 6–7, 9–10, 12, 14, 16, 19–20 |
+| Water | Platyflow | Water | 535 | Lv. 33 | Marinedge | — |
+| Water | Marinedge | Water/Steel | 625 | — | — | — |
 
 ---
 
@@ -80,7 +82,7 @@ Grouped by the layer of Maltese history they draw on.
 | Kalankros | Water/Rock | water | 542 | — | — | 9–10, 12, 14, 16, 19–20 |
 | Vurjenn | Flying | water | 415 | Lv. 21 | Vurjenzu | 2–3, 6–7, 9–10, 12, 14, 16, 19–20 |
 | Vurjenzu | Flying/Water | water | 552 | — | — | 6–7, 9–10, 12, 14, 16, 19–20 |
-| Ondallus | Water | water | 495 | Lv. 35 | Ondraguna | 2–3, 6–7, 9–10, 12, 14, 16, 19–20 |
+| Ondallus | Water | water | 495 | Lv. 35 | Ondraguna | 6–7, 9–10, 12, 14, 16, 19–20 |
 | Ondraguna | Water/Dragon | water | 661 | — | — | 12, 14, 16, 19–20 |
 | Ramliet | Ground | sand | 340 | Lv. 22 | Ramlietan | 2, 4, 6, 8, 11, 13, 16, 18 |
 | Ramlietan | Ground/Rock | sand | 453 | — | — | 6, 8, 11, 13, 16, 18 |
@@ -109,11 +111,11 @@ Grouped by the layer of Maltese history they draw on.
 |---|---|---|---|---|---|---|
 | Karkarun | Rock | rock | 425 | Lv. 25 | Karkarotta | 1, 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
 | Karkarotta | Rock/Ground | rock | 567 | — | — | 8, 10, 12, 14–15, 17–18, 20 |
-| Santwarr | Rock | rock | 470 | Lv. 30 | Santwarjun | 1, 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
+| Santwarr | Rock | rock | 470 | Lv. 30 | Santwarjun | 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
 | Santwarjun | Rock/Psychic | rock | 629 | — | — | 10, 12, 14–15, 17–18, 20 |
 | Dormina | Psychic | rock | 405 | Lv. 28 | Dorminarja | 1, 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
 | Dorminarja | Psychic/Fairy | rock | 541 | — | — | 8, 10, 12, 14–15, 17–18, 20 |
-| Ggantroll | Rock | rock | 472 | Lv. 32 | Ġgantmastru | 1, 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
+| Ggantroll | Rock | rock | 472 | Lv. 32 | Ġgantmastru | 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
 | Ġgantmastru | Rock/Fighting | rock | 632 | — | — | 10, 12, 14–15, 17–18, 20 |
 
 ### Bronze Age · 2500–700 BC (4)
@@ -144,9 +146,9 @@ Grouped by the layer of Maltese history they draw on.
 | Mosaikos | Rock/Psychic | rock | 532 | — | — | 10, 12, 14–15, 17–18, 20 |
 | Amforu | Ground | sand | 418 | Lv. 25 | Amforjun | 2, 4, 6, 8, 11, 13, 16, 18 |
 | Amforjun | Ground/Water | sand | 559 | — | — | 8, 11, 13, 16, 18 |
-| Laurentu | Grass | grass | 472 | Lv. 28 | Laurentissu | 1, 4–5, 7, 9, 11, 13, 15, 17, 19 |
+| Laurentu | Grass | grass | 472 | Lv. 28 | Laurentissu | 4–5, 7, 9, 11, 13, 15, 17, 19 |
 | Laurentissu | Grass/Fighting | grass | 630 | — | — | 9, 11, 13, 15, 17, 19 |
-| Vipaulus | Poison | grass | 470 | Lv. 26 | Vipaulinu | 1, 4–5, 7, 9, 11, 13, 15, 17, 19 |
+| Vipaulus | Poison | grass | 470 | Lv. 26 | Vipaulinu | 4–5, 7, 9, 11, 13, 15, 17, 19 |
 | Vipaulinu | Poison/Fighting | grass | 626 | — | — | 9, 11, 13, 15, 17, 19 |
 
 ### Arab Period · 870–1091 (6)
@@ -167,27 +169,27 @@ Grouped by the layer of Maltese history they draw on.
 | Skudier | Steel | rock | 354 | Lv. 27 | Kavallier | 1, 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
 | Kavallier | Steel/Fighting | rock | 486 | Lv. 42 | Granmastru | 8, 10, 12, 14–15, 17–18, 20 |
 | Granmastru | Steel/Psychic | rock | 590 | — | — | 14–15, 17–18, 20 |
-| Falkun | Flying | rock | 558 | Lv. 30 | Falkunjier | 1, 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
+| Falkun | Flying | rock | 558 | Lv. 30 | Falkunjier | 10, 12, 14–15, 17–18, 20 |
 | Falkunjier | Flying/Steel | rock | 742 | — | — | 10, 12, 14–15, 17–18, 20 |
 
 ### Great Siege · 1565 (6)
 
 | Creature | Types | Biome | BST | Evolves | Becomes | Stages |
 |---|---|---|---|---|---|---|
-| Jannisar | Fighting | sand | 500 | Lv. 28 | Jannisarju | 2, 4, 6, 8, 11, 13, 16, 18 |
+| Jannisar | Fighting | sand | 500 | Lv. 28 | Jannisarju | 4, 6, 8, 11, 13, 16, 18 |
 | Jannisarju | Fighting/Fire | sand | 667 | — | — | 8, 11, 13, 16, 18 |
-| Bombarda | Fire | rock | 508 | Lv. 31 | Bombardun | 1, 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
+| Bombarda | Fire | rock | 508 | Lv. 31 | Bombardun | 5, 8, 10, 12, 14–15, 17–18, 20 |
 | Bombardun | Fire/Steel | rock | 681 | — | — | 10, 12, 14–15, 17–18, 20 |
-| Hilalux | Dark | sand | 524 | Lv. 26 | Hilaluna | 2, 4, 6, 8, 11, 13, 16, 18 |
+| Hilalux | Dark | sand | 524 | Lv. 26 | Hilaluna | 6, 8, 11, 13, 16, 18 |
 | Hilaluna | Dark/Flying | sand | 699 | — | — | 8, 11, 13, 16, 18 |
 
 ### British Period · 1800–1964 (4)
 
 | Creature | Types | Biome | BST | Evolves | Becomes | Stages |
 |---|---|---|---|---|---|---|
-| Pustaljon | Electric | grass | 462 | Lv. 27 | Pustaljunar | 1, 4–5, 7, 9, 11, 13, 15, 17, 19 |
+| Pustaljon | Electric | grass | 462 | Lv. 27 | Pustaljunar | 4–5, 7, 9, 11, 13, 15, 17, 19 |
 | Pustaljunar | Electric/Steel | grass | 616 | — | — | 9, 11, 13, 15, 17, 19 |
-| Konvoj | Water | water | 506 | Lv. 33 | Konvojarma | 2–3, 6–7, 9–10, 12, 14, 16, 19–20 |
+| Konvoj | Water | water | 506 | Lv. 33 | Konvojarma | 6–7, 9–10, 12, 14, 16, 19–20 |
 | Konvojarma | Water/Steel | water | 676 | — | — | 10, 12, 14, 16, 19–20 |
 
 ---
@@ -198,11 +200,11 @@ Rarer than the wild roster — a fifth of the encounter weight.
 
 | Creature | Types | Biome | BST | Evolves | Becomes | Stages |
 |---|---|---|---|---|---|---|
-| Ferrocane | Electric | rock | 510 | Lv. 30 | Ferrocanun | 1, 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
+| Ferrocane | Electric | rock | 510 | Lv. 30 | Ferrocanun | 5, 8, 10, 12, 14–15, 17–18, 20 |
 | Ferrocanun | Electric/Fire | rock | 679 | — | — | 10, 12, 14–15, 17–18, 20 |
-| Katakomba | Ghost | rock | 480 | Lv. 29 | Katakombrun | 1, 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
+| Katakomba | Ghost | rock | 480 | Lv. 29 | Katakombrun | 3, 5, 8, 10, 12, 14–15, 17–18, 20 |
 | Katakombrun | Ghost/Rock | rock | 642 | — | — | 10, 12, 14–15, 17–18, 20 |
-| Zavorra | Water | water | 480 | Lv. 31 | Zavorrun | 2–3, 6–7, 9–10, 12, 14, 16, 19–20 |
+| Zavorra | Water | water | 480 | Lv. 31 | Zavorrun | 3, 6–7, 9–10, 12, 14, 16, 19–20 |
 | Zavorrun | Water/Steel | water | 640 | — | — | 9–10, 12, 14, 16, 19–20 |
 
 ---

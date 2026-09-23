@@ -10,6 +10,7 @@ import { ScreenBackground } from "./components/ScreenBackground";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { colors } from "./theme";
 import { useI18n } from "../i18n";
+import { useItemFlow } from "./components/useItemFlow";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Bag">;
 
@@ -17,6 +18,8 @@ export function BagScreen({ navigation }: Props) {
   const inventory = useGameStore((s) => s.inventory);
   const [category, setCategory] = useState<ItemCategory>("balls");
   const { t, c } = useI18n();
+  const party = useGameStore((s) => s.party);
+  const itemFlow = useItemFlow();
   const TAB_LABEL: Record<ItemCategory, string> = {
     balls: t("bag.balls"),
     medicine: t("bag.medicine"),
@@ -60,17 +63,56 @@ export function BagScreen({ navigation }: Props) {
               <Text style={styles.itemMeta}>{t("bag.restores", { amount: item.healAmount })}</Text>
             )}
             {item.effect === "level_up" && <Text style={styles.itemMeta}>{t("bag.levelUp")}</Text>}
+            {item.effect && (inventory[item.id] ?? 0) > 0 && party.length > 0 && (
+              <Pressable
+                testID={`bag-use-${item.id}`}
+                onPress={() => itemFlow.chooseCreatureFor(item.id)}
+                style={({ pressed }) => [styles.useButton, pressed && styles.useButtonPressed]}
+              >
+                <Text style={styles.useButtonText}>{t("bag.use")}</Text>
+              </Pressable>
+            )}
           </View>
         ))}
         {items.length === 0 && <Text style={styles.empty}>{t("bag.empty")}</Text>}
       </ScrollView>
 
+      {itemFlow.feedback && (
+        <Text testID="bag-feedback" style={styles.feedback}>
+          {itemFlow.feedback}
+        </Text>
+      )}
       <PrimaryButton testID="back-button" label={t("common.back")} variant="secondary" onPress={() => navigation.goBack()} />
+      {itemFlow.overlays}
     </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  useButton: {
+    alignSelf: "flex-start",
+    marginTop: 4,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: colors.accent,
+  },
+  useButtonPressed: {
+    opacity: 0.8,
+  },
+  useButtonText: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  feedback: {
+    color: colors.text,
+    fontSize: 13,
+    textAlign: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 10,
+    padding: 10,
+  },
   container: {
     paddingHorizontal: 20,
     paddingTop: 56,

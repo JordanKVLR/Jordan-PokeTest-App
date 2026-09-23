@@ -49,12 +49,34 @@ export const StatBlockSchema = z.object({
   speed: z.number().int().positive(),
 });
 
+/**
+ * Which layer of Maltese history a creature belongs to. The islands have been continuously
+ * inhabited for seven millennia and every occupier left something behind, so the roster is
+ * organised the way the archaeology is: by era. "wild" covers the creatures that are just
+ * fauna, belonging to no particular period.
+ */
+export const EraSchema = z.enum([
+  "wild",
+  "neolithic",
+  "bronze",
+  "phoenician",
+  "roman",
+  "arab",
+  "knights",
+  "ottoman",
+  "british",
+]);
+
 export const StarterStageSchema = z.object({
   id: z.string(),
   name: z.string(),
   stage: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   types: z.array(TypeNameSchema).min(1).max(2),
   evolvesAtLevel: z.number().int().positive().nullable(),
+  /** Which layer of Maltese history the line draws on, for the Codex. */
+  era: EraSchema.optional(),
+  /** Codex entry text. */
+  flavor: z.string().optional(),
   /** This stage's own reference stat block (see progression.ts's "level-50 reference" scaling) —
    * every stage has its own now, not just the final one, so evolving actually changes stats
    * rather than just the displayed name/species. */
@@ -160,23 +182,6 @@ export const ItemsFileSchema = z.object({
   items: z.array(ItemDataSchema),
 });
 
-/**
- * Which layer of Maltese history a creature belongs to. The islands have been continuously
- * inhabited for seven millennia and every occupier left something behind, so the roster is
- * organised the way the archaeology is: by era. "wild" covers the creatures that are just
- * fauna, belonging to no particular period.
- */
-export const EraSchema = z.enum([
-  "wild",
-  "neolithic",
-  "bronze",
-  "phoenician",
-  "roman",
-  "arab",
-  "knights",
-  "ottoman",
-  "british",
-]);
 
 export const WildCreatureSchema = z.object({
   id: z.string(),

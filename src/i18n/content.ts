@@ -1,3 +1,4 @@
+import startersData from "../data/starters.json";
 import movesData from "../data/moves.json";
 import itemsData from "../data/items.json";
 import wildCreaturesData from "../data/wildCreatures.json";
@@ -52,6 +53,9 @@ const EN_ITEMS = new Map(itemsData.items.map((i) => [i.id, i]));
 const EN_STAGES = new Map(STAGES.map((s) => [s.id, s.name]));
 const EN_GYMS = new Map(ALL_MEDALS.map((g) => [g.medalId, g]));
 const EN_FLAVOR = new Map<string, string>([
+  ...startersData.starters.flatMap((line) =>
+    line.stages.filter((stage) => stage.flavor).map((stage) => [stage.id, stage.flavor!] as [string, string])
+  ),
   ...wildCreaturesData.wildCreatures.map((c) => [c.id, c.flavor] as [string, string]),
   ...regionalVariantsData.regionalVariants.map((c) => [c.id, c.flavor] as [string, string]),
   ...legendariesData.legendaries.map((c) => [c.id, c.aesthetic] as [string, string]),

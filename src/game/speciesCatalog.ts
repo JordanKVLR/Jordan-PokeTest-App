@@ -68,7 +68,10 @@ const starterEntries: DexEntry[] = starters.flatMap((line) =>
     types: stage.types,
     category: "starter" as const,
     stats: stage.baseStats,
-    signatureMove: stage.stage === 3 ? line.signatureMove : undefined,
+    flavor: stage.flavor,
+    era: stage.era,
+    // The signature move is the line's, and the Codex says so from the first stage on.
+    signatureMove: line.signatureMove,
     evolvesAtLevel: stage.evolvesAtLevel,
   }))
 );
@@ -108,4 +111,39 @@ export const DEX_ENTRIES: DexEntry[] = [...starterEntries, ...wildEntries, ...re
 
 export function getDexEntry(speciesId: string): DexEntry | undefined {
   return DEX_ENTRIES.find((e) => e.speciesId === speciesId);
+}
+
+export interface EvolutionLink {
+  speciesId: string;
+  name: string;
+  level: number;
+}
+
+/** species id → the form it grows into, and at what level. Built from every line in the data. */
+const NEXT_FORM = new Map<string, EvolutionLink>();
+for (const line of starters) {
+  line.stages.forEach((stage, index) => {
+    const next = line.stages[index + 1];
+    if (next && stage.evolvesAtLevel) {
+      NEXT_FORM.set(stage.id, { speciesId: next.id, name: next.name, level: stage.evolvesAtLevel });
+    }
+  });
+}
+for (const species of [...wildCreatures, ...regionalVariants, ...legendaries]) {
+  if (!species.evolvesInto || !species.evolvesAtLevel) continue;
+  const next = DEX_ENTRIES.find((e) => e.speciesId === species.evolvesInto);
+  if (next) NEXT_FORM.set(species.id, { speciesId: next.speciesId, name: next.name, level: species.evolvesAtLevel });
+}
+
+/** Where a species sits in its line: what it grew from and what it grows into, if anything. */
+export function evolutionLinks(speciesId: string): { from?: EvolutionLink; into?: EvolutionLink } {
+  const into = NEXT_FORM.get(speciesId);
+  let from: EvolutionLink | undefined;
+  for (const [fromId, link] of NEXT_FORM) {
+    if (link.speciesId === speciesId) {
+      from = { speciesId: fromId, name: getDexEntry(fromId)?.name ?? fromId, level: link.level };
+      break;
+    }
+  }
+  return { from, into };
 }

@@ -4,10 +4,12 @@ import {
   detectLanguage,
   encounterChance,
   trainerIntroHoldMs,
+  showsPopups,
+  FASTEST_BEAT_MS,
   withDefaults,
 } from "../settings";
 
-const at = (battlePace: "tap" | "standard" | "quick", textSpeed: "slow" | "normal" | "fast" = "normal") => ({
+const at = (battlePace: "tap" | "standard" | "quick" | "fastest", textSpeed: "slow" | "normal" | "fast" = "normal") => ({
   battlePace,
   textSpeed,
 });
@@ -50,6 +52,13 @@ describe("battle pacing", () => {
     expect(trainerIntroHoldMs(at("standard"))).toBeNull();
     expect(trainerIntroHoldMs(at("tap"))).toBeNull();
     expect(trainerIntroHoldMs(at("quick"))).toBeGreaterThan(0);
+    expect(trainerIntroHoldMs(at("fastest"))!).toBeLessThan(trainerIntroHoldMs(at("quick"))!);
+  });
+
+  it("Fastest drops the popups and keeps the old 550ms turn rhythm", () => {
+    expect(showsPopups("fastest")).toBe(false);
+    for (const pace of ["tap", "standard", "quick"] as const) expect(showsPopups(pace)).toBe(true);
+    expect(FASTEST_BEAT_MS).toBe(550);
   });
 });
 

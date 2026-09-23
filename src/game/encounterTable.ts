@@ -49,9 +49,29 @@ for (const species of [...wildCreatures, ...regionalVariants, ...legendaries]) {
 /** How far below its evolution level a form may still appear, so tables don't switch over abruptly. */
 const EVOLVED_FORM_GRACE = 3;
 
-function availableAtLevel(speciesId: string, baseLevel: number): boolean {
-  const threshold = EVOLVES_AT.get(speciesId);
-  return threshold === undefined || baseLevel >= threshold - EVOLVED_FORM_GRACE;
+/**
+ * A first form's stats set how early it may turn up. A starter's first stage totals
+ * STARTER_FIRST_STAGE_BST; a wild first form stronger than that waits in proportion to the gap,
+ * so the opening roads are not full of creatures that simply outclass the partner you chose —
+ * a 558-total Falkun belongs around level 25, not level 5.
+ */
+export const STARTER_FIRST_STAGE_BST = 430;
+const LEVELS_PER_EXTRA_STAT_POINT = 0.2;
+
+function statTotal(stats: { hp: number; atk: number; def: number; spatk: number; spdef: number; speed: number }): number {
+  return stats.hp + stats.atk + stats.def + stats.spatk + stats.spdef + stats.speed;
+}
+
+/** The lowest zone level a species can appear at, from its line (evolved forms) or its stats (first forms). */
+export function earliestWildLevel(species: { id: string; baseStats: Parameters<typeof statTotal>[0] }): number {
+  const threshold = EVOLVES_AT.get(species.id);
+  if (threshold !== undefined) return threshold - EVOLVED_FORM_GRACE;
+  const excess = statTotal(species.baseStats) - STARTER_FIRST_STAGE_BST;
+  return excess > 0 ? Math.ceil(excess * LEVELS_PER_EXTRA_STAT_POINT) : 0;
+}
+
+function availableAtLevel(species: { id: string; baseStats: Parameters<typeof statTotal>[0] }, baseLevel: number): boolean {
+  return baseLevel >= earliestWildLevel(species);
 }
 
 /** Vanishingly rare relative to the rest of any biome's table (a single wild creature alone
@@ -100,7 +120,7 @@ export function buildBiomeEncounterTable(
   const table: EncounterOption[] = [];
 
   for (const wc of wildCreatures) {
-    if (!spawnsIn(wc.biome, biome) || !availableAtLevel(wc.id, baseLevel)) continue;
+    if (!spawnsIn(wc.biome, biome) || !availableAtLevel(wc, baseLevel)) continue;
     table.push({
       weight: 5,
       build: (id) =>
@@ -117,7 +137,7 @@ export function buildBiomeEncounterTable(
   }
 
   for (const rv of regionalVariants) {
-    if (!spawnsIn(rv.biome, biome) || !availableAtLevel(rv.id, baseLevel)) continue;
+    if (!spawnsIn(rv.biome, biome) || !availableAtLevel(rv, baseLevel)) continue;
     table.push({
       weight: 1,
       build: (id) =>

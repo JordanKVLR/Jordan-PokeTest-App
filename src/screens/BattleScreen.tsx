@@ -38,6 +38,7 @@ import { LevelUpModal, type LevelUpRevealData } from "./components/LevelUpModal"
 import { EvolutionModal, type EvolutionRevealData } from "./components/EvolutionModal";
 import { MoveLearnModal, type MoveLearnPrompt } from "./components/MoveLearnModal";
 import { BlackoutOverlay } from "./components/BlackoutOverlay";
+import { useTapAnywhere } from "./components/useTapAnywhere";
 import { VictoryOverlay } from "./components/VictoryOverlay";
 import { ElementalTransition } from "./components/ElementalTransition";
 import { BattleMessage } from "./components/BattleMessage";
@@ -46,7 +47,7 @@ import { colors } from "./theme";
 import { MoveDetailCard } from "./components/MoveDetailCard";
 import { useI18n } from "../i18n";
 import { useSettings } from "../state/settingsStore";
-import { autoAdvanceMs, type MessageKind } from "../game/settings";
+import { autoAdvanceMs, FASTEST_BEAT_MS, showsPopups, type MessageKind } from "../game/settings";
 import { trainerLines } from "../game/trainers";
 import type { BoastRef } from "../i18n/boasts";
 
@@ -113,6 +114,16 @@ function snapshotFrom(ctx: BattleContext): BattleSnapshot {
   };
 }
 
+/** The end-of-battle card: a tap anywhere on it goes home, not just on the button. */
+function ResultTapCatcher({ onTap, children }: { onTap: () => void; children: React.ReactNode }) {
+  const tap = useTapAnywhere(onTap);
+  return (
+    <Pressable testID="result-overlay" accessibilityRole="button" onPress={tap} style={styles.resultOverlay}>
+      {children}
+    </Pressable>
+  );
+}
+
 export function BattleScreen({ navigation, route }: Props) {
   const biome = route.params.biome;
   const selectedLine = useGameStore((s) => s.selectedLine) ?? "Water";
@@ -138,6 +149,9 @@ export function BattleScreen({ navigation, route }: Props) {
   const i18n = useI18n();
   const { t, c, plural } = i18n;
   const battlePace = useSettings((s) => s.battlePace);
+  // Read through a ref by the turn's continuations, which run long after the render that made them.
+  const paceRef = useRef(battlePace);
+  paceRef.current = battlePace;
   const textSpeed = useSettings((s) => s.textSpeed);
   const trainerIntros = useSettings((s) => s.trainerIntros);
   const textSize = useSettings((s) => s.textSize);
@@ -292,6 +306,11 @@ export function BattleScreen({ navigation, route }: Props) {
       return;
     }
     pushLog(text);
+    // Fastest: the log is the whole story, as it was before messages became popups.
+    if (!showsPopups(paceRef.current)) {
+      options.after?.();
+      return;
+    }
     popupIdRef.current += 1;
     const popup: BattlePopup = { id: popupIdRef.current, lines: text, kind, ...options };
     setPopups((prev) => [...prev, popup]);
@@ -520,9 +539,15 @@ export function BattleScreen({ navigation, route }: Props) {
         const emphasis = fainted ? (isPlayer ? "good" : "bad") : "none";
         say(resultLinesFor(outcome, playerActiveId), "result", {
           emphasis,
-          after: () => revealBeat(index + 1),
+          after: () => (fastest ? setTimeout(() => revealBeat(index + 1), fastestRest) : revealBeat(index + 1)),
         });
       }
+
+      // Fastest keeps the pre-popup rhythm: the target reacts when the projectile lands, and the
+      // next attacker goes FASTEST_BEAT_MS after this one started.
+      const fastest = !showsPopups(paceRef.current);
+      const strikeMs = fastest ? PROJECTILE_TRAVEL_MS : Math.max(PROJECTILE_TRAVEL_MS, STRIKE_PLAY_MS);
+      const fastestRest = Math.max(0, FASTEST_BEAT_MS - (outcome.action.kind === "move" ? strikeMs : 0));
 
       // Two beats per action: who is doing what, then — after the strike has actually played —
       // what it did. The damage number is never on screen for less time than it takes to read.
@@ -536,7 +561,7 @@ export function BattleScreen({ navigation, route }: Props) {
             setTimeout(() => {
               applyReaction();
               reportResult();
-            }, Math.max(PROJECTILE_TRAVEL_MS, STRIKE_PLAY_MS));
+            }, strikeMs);
           } else {
             applyReaction();
             reportResult();
@@ -1218,7 +1243,7 @@ export function BattleScreen({ navigation, route }: Props) {
       )}
 
       <Modal visible={!!outcome && outcome !== "enemy" && !messageWaiting && !levelUpReveal && !evolutionReveal && movePrompts.length === 0} transparent animationType="fade" onRequestClose={() => {}}>
-        <View style={styles.resultOverlay}>
+        <ResultTapCatcher onTap={() => navigation.popToTop()}>
           <Text style={styles.resultTitle}>
             {outcome === "player"
               ? t("result.victory")
@@ -1246,7 +1271,8 @@ export function BattleScreen({ navigation, route }: Props) {
             </Text>
           )}
           <PrimaryButton testID="return-to-home" label={t("battle.returnHome")} onPress={() => navigation.popToTop()} />
-        </View>
+          <Text style={styles.resultHint}>{t("common.tapAnywhere")}</Text>
+        </ResultTapCatcher>
       </Modal>
     </View>
   );
@@ -1464,6 +1490,11 @@ const styles = StyleSheet.create({
     borderColor: colors.accent,
     borderRadius: 12,
     padding: 14,
+  },
+  resultHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    textAlign: "center",
   },
   resultOverlay: {
     position: "absolute",

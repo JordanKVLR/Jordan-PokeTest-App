@@ -1,12 +1,15 @@
 import wildCreaturesData from "../../data/wildCreatures.json";
 import { WildCreaturesFileSchema } from "../../data/schemas";
-import { buildBiomeEncounterTable, rollEncounter, type EncounterOption } from "../encounterTable";
+import { getDexEntry } from "../speciesCatalog";
+import { buildBiomeEncounterTable, earliestWildLevel, rollEncounter, STARTER_FIRST_STAGE_BST, type EncounterOption } from "../encounterTable";
 
 const wildCreatures = WildCreaturesFileSchema.parse(wildCreaturesData).wildCreatures;
 
 describe("buildBiomeEncounterTable — per-biome pools", () => {
   it("only includes species tagged with the requested biome (plus the universal legendary tier)", () => {
-    const rockTable = buildBiomeEncounterTable("rock", "Water", { baseLevel: 4, levelSpread: 2, legendaryMinLevel: 25 });
+    // Level 17: late enough that the stronger first forms (held back early, see
+    // earliestWildLevel) have joined the table, still short of any evolved rock form.
+    const rockTable = buildBiomeEncounterTable("rock", "Water", { baseLevel: 17, levelSpread: 2, legendaryMinLevel: 25 });
     const rockIds = rockTable.map((o: EncounterOption) => o.build("probe").creature.speciesId);
     // Rock-biome wild creatures + the two rock-tagged regional variants should all be present...
     for (const id of ["qortong", "xrobbog", "karkarun", "bulqajra", "santwarr", "ferrocane", "katakomba"]) {
@@ -105,5 +108,29 @@ describe("buildBiomeEncounterTable — per-biome pools", () => {
       expect(participant.creature.level).toBeGreaterThanOrEqual(25);
       expect(["aegilord", "megalithos", "siroccus"]).toContain(participant.creature.speciesId);
     });
+  });
+});
+
+describe("early wild creatures do not outclass the starters", () => {
+  const statTotal = (s: { hp: number; atk: number; def: number; spatk: number; spdef: number; speed: number }) =>
+    s.hp + s.atk + s.def + s.spatk + s.spdef + s.speed;
+
+  it("keeps every non-legendary on the first road within reach of a starter's first stage", () => {
+    for (const biome of ["grass", "rock", "water", "sand"] as const) {
+      const table = buildBiomeEncounterTable(biome, "Grass", { baseLevel: 4, levelSpread: 2, legendaryMinLevel: 99 });
+      for (const option of table) {
+        const { creature } = option.build("probe");
+        if (creature.level >= 99) continue; // the rare legendary layer is meant to be a shock
+        const total = statTotal(getDexEntry(creature.speciesId)!.stats!);
+        expect({ id: creature.speciesId, over: total > STARTER_FIRST_STAGE_BST + 25 }).toEqual({
+          id: creature.speciesId,
+          over: false,
+        });
+      }
+    }
+  });
+
+  it("still lets the strongest first forms in once the levels catch up", () => {
+    expect(earliestWildLevel({ id: "falkun", baseStats: wildCreatures.find((w) => w.id === "falkun")!.baseStats })).toBeGreaterThan(20);
   });
 });

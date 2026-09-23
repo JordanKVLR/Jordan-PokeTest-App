@@ -16,9 +16,11 @@ export type ControlSide = "left" | "center" | "right";
  * - `tap`: every message waits for a tap.
  * - `standard`: a chosen action plays out on its own after a beat; what it did — the damage,
  *   the effects — waits for a tap so there is time to read it.
- * - `quick`: nothing waits; the whole turn plays through and control comes back.
+ * - `quick`: nothing waits for a tap, but each message is still shown for a moment.
+ * - `fastest`: no popups at all. The turn plays straight into the battle log on the timings the
+ *   game used before battle messages became popups — one attacker every 550ms.
  */
-export type BattlePace = "tap" | "standard" | "quick";
+export type BattlePace = "tap" | "standard" | "quick" | "fastest";
 export type TextSpeed = "slow" | "normal" | "fast";
 /** Full: the elemental wipe and the trainer's line. Brief: straight into the fight. */
 export type TrainerIntros = "full" | "brief";
@@ -69,7 +71,17 @@ const HOLD: Record<BattlePace, Record<MessageKind, number | null>> = {
   tap: { action: null, result: null, info: null, key: null },
   standard: { action: 1000, result: null, info: 1400, key: null },
   quick: { action: 800, result: 1500, info: 1100, key: 2200 },
+  // Never shown as popups (see showsPopups); kept so the table covers every pace.
+  fastest: { action: 0, result: 0, info: 0, key: 0 },
 };
+
+/** Whether battle messages appear as popups at all. On Fastest they only go into the log. */
+export function showsPopups(pace: BattlePace): boolean {
+  return pace !== "fastest";
+}
+
+/** Time between one attacker's beat and the next on Fastest: the pre-popup turn rhythm. */
+export const FASTEST_BEAT_MS = 550;
 
 /** Extra time per additional line, so a three-line result is not gone before it is read. */
 const PER_EXTRA_LINE_MS = 550;
@@ -91,9 +103,10 @@ export function autoAdvanceMs(
 
 /**
  * How long the trainer's opening line holds before the fight starts, or null to wait for a tap.
- * Only Quick pace lets it go by itself — the line is the trainer's one moment.
+ * Only Quick and Fastest let it go by itself — the line is the trainer's one moment.
  */
 export function trainerIntroHoldMs(settings: Pick<Settings, "battlePace" | "textSpeed">): number | null {
+  if (settings.battlePace === "fastest") return Math.round(1200 * SPEED_FACTOR[settings.textSpeed]);
   if (settings.battlePace !== "quick") return null;
   return Math.round(2400 * SPEED_FACTOR[settings.textSpeed]);
 }

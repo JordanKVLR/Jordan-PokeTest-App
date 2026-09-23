@@ -1,13 +1,12 @@
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { useGameStore } from "../state/gameStore";
-import { getDexEntry } from "../game/speciesCatalog";
+import { evolutionLinks, getDexEntry } from "../game/speciesCatalog";
 import { getMove } from "../game/movesRepo";
 import { partyMemberStats, remainingPp } from "../game/party";
 import { xpToNextLevel } from "../game/progression";
-import { usableItems } from "../game/itemsRepo";
 import type { StatBlock } from "../data/schemas";
 import { HpBar } from "./components/HpBar";
 import { TypeBadge } from "./components/TypeBadge";
@@ -15,10 +14,8 @@ import { CreatureAvatar } from "./components/CreatureAvatar";
 import { PrimaryButton } from "./components/PrimaryButton";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
-import { LevelUpModal, type LevelUpRevealData } from "./components/LevelUpModal";
-import { EvolutionModal, type EvolutionRevealData } from "./components/EvolutionModal";
-import { MoveLearnModal, type MoveLearnPrompt } from "./components/MoveLearnModal";
 import { MoveDetailCard } from "./components/MoveDetailCard";
+import { useItemFlow } from "./components/useItemFlow";
 import { useI18n } from "../i18n";
 import { colors } from "./theme";
 
@@ -42,30 +39,60 @@ function StatBar({ label, value }: { label: string; value: number }) {
   );
 }
 
+/**
+ * Where this creature sits in its line. A form the player has never met stays a mystery, the
+ * same as it is in the Codex, so the page doesn't spoil what a starter turns into.
+ */
+function EvolutionSection({
+  speciesId,
+  known,
+  onOpen,
+}: {
+  speciesId: string;
+  known: (speciesId: string) => boolean;
+  onOpen: (speciesId: string) => void;
+}) {
+  const { t } = useI18n();
+  const { from, into } = evolutionLinks(speciesId);
+  const link = (target: { speciesId: string; name: string; level: number }, key: "detail.evolvesFrom" | "detail.evolvesInto") => {
+    const isKnown = known(target.speciesId);
+    const label = t(key, { name: isKnown ? target.name : t("detail.unknownForm"), level: target.level });
+    return isKnown ? (
+      <Pressable testID={`evolution-${target.speciesId}`} onPress={() => onOpen(target.speciesId)}>
+        <Text style={[styles.flavorText, styles.linkText]}>{label} ›</Text>
+      </Pressable>
+    ) : (
+      <Text style={styles.flavorText}>{label}</Text>
+    );
+  };
+  return (
+    <View style={styles.section} testID="evolution-section">
+      <Text style={styles.sectionTitle}>{t("detail.evolution")}</Text>
+      {from && link(from, "detail.evolvesFrom")}
+      {into ? link(into, "detail.evolvesInto") : <Text style={styles.flavorText}>{t("detail.finalForm")}</Text>}
+    </View>
+  );
+}
+
 export function CreatureDetailScreen({ route, navigation }: Props) {
   const params = route.params;
   const party = useGameStore((s) => s.party);
   const caughtSpeciesIds = useGameStore((s) => s.caughtSpeciesIds);
+  const seenSpeciesIds = useGameStore((s) => s.seenSpeciesIds);
   const releaseCreature = useGameStore((s) => s.releaseCreature);
-  const inventory = useGameStore((s) => s.inventory);
-  const useItemOnPartyMember = useGameStore((s) => s.useItemOnPartyMember);
   const renamePartyMember = useGameStore((s) => s.renamePartyMember);
-  const replacePartyMemberMove = useGameStore((s) => s.replacePartyMemberMove);
   const [confirmingRelease, setConfirmingRelease] = useState(false);
-  const [showItems, setShowItems] = useState(false);
-  const [itemFeedback, setItemFeedback] = useState<string | null>(null);
-  const [levelUpReveal, setLevelUpReveal] = useState<LevelUpRevealData | null>(null);
-  const [evolutionReveal, setEvolutionReveal] = useState<EvolutionRevealData | null>(null);
-  const [movePrompts, setMovePrompts] = useState<MoveLearnPrompt[]>([]);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [openMoveId, setOpenMoveId] = useState<string | null>(null);
+  const itemFlow = useItemFlow();
   const { t, c } = useI18n();
 
   useKeyboardShortcuts({ m: () => navigation.popToTop() });
 
   const partyMember = params.source === "party" ? party.find((m) => m.uid === params.uid) : undefined;
-  const dexEntry = params.source === "species" ? getDexEntry(params.speciesId) : undefined;
+  // A party member's page carries its species' Codex entry too — description, era, line.
+  const dexEntry = getDexEntry(params.source === "species" ? params.speciesId : partyMember?.speciesId ?? "");
 
   if (params.source === "party" && !partyMember) {
     return (
@@ -93,7 +120,6 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
   const signatureMove = dexEntry?.signatureMove ? c.signature(dexEntry.signatureMove) : undefined;
   const isCaught = params.source === "species" ? caughtSpeciesIds.includes(params.speciesId) : true;
 
-  const applicableItems = usableItems().filter((item) => (inventory[item.id] ?? 0) > 0);
 
   function handleStartRename() {
     setNameDraft(partyMember?.displayName ?? "");
@@ -103,49 +129,6 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
   function handleSaveRename() {
     if (partyMember) renamePartyMember(partyMember.uid, nameDraft);
     setRenaming(false);
-  }
-
-  function handleUseItem(itemId: string) {
-    const itemName = c.item(itemId);
-    if (!partyMember) return;
-    const oldStats = partyMemberStats(partyMember);
-    const oldLevel = partyMember.level;
-    const result = useItemOnPartyMember(partyMember.uid, itemId);
-    if (!result.applied) return;
-    setShowItems(false);
-    if (result.effect === "heal") {
-      setItemFeedback(t("detail.healed", { name: partyMember.displayName, item: itemName, amount: result.healedAmount }));
-    } else {
-      const leveled = result.member;
-      for (const moveId of result.moveLearning.learned) {
-        setItemFeedback(t("battle.learned", { name: leveled.displayName, move: c.move(moveId) }));
-      }
-      if (result.moveLearning.pending.length > 0) {
-        setMovePrompts(
-          result.moveLearning.pending.map((moveId) => ({
-            uid: leveled.uid,
-            displayName: leveled.displayName,
-            newMoveId: moveId,
-            currentMoveIds: leveled.moveIds,
-          }))
-        );
-      }
-      if (result.evolution) {
-        setItemFeedback(t("evolve.done", { old: result.evolution.oldDisplayName, new: result.evolution.newDisplayName }));
-        setEvolutionReveal(result.evolution);
-      } else {
-        setItemFeedback(t("detail.grew", { name: partyMember.displayName, item: itemName, level: leveled.level }));
-      }
-      setLevelUpReveal({
-        speciesId: leveled.speciesId,
-        types: leveled.types,
-        displayName: leveled.displayName,
-        oldLevel,
-        newLevel: leveled.level,
-        oldStats,
-        newStats: partyMemberStats(leveled),
-      });
-    }
   }
 
   return (
@@ -203,18 +186,15 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
             </Text>
             <Pressable
               testID="open-detail-item-sheet"
-              onPress={() => {
-                setItemFeedback(null);
-                setShowItems(true);
-              }}
-              disabled={applicableItems.length === 0}
-              style={[styles.useItemButton, applicableItems.length === 0 && styles.useItemButtonDisabled]}
+              onPress={() => itemFlow.chooseItemFor(partyMember.uid)}
+              disabled={!itemFlow.hasUsableItems}
+              style={[styles.useItemButton, !itemFlow.hasUsableItems && styles.useItemButtonDisabled]}
             >
-              <Text style={[styles.useItemButtonText, applicableItems.length === 0 && styles.useItemButtonTextDisabled]}>
-                {applicableItems.length > 0 ? t("detail.useItem") : t("detail.noItems")}
+              <Text style={[styles.useItemButtonText, !itemFlow.hasUsableItems && styles.useItemButtonTextDisabled]}>
+                {itemFlow.hasUsableItems ? t("detail.useItem") : t("detail.noItems")}
               </Text>
             </Pressable>
-            {itemFeedback && <Text style={styles.flavorText}>{itemFeedback}</Text>}
+            {itemFlow.feedback && <Text style={styles.flavorText}>{itemFlow.feedback}</Text>}
           </View>
         )}
 
@@ -233,6 +213,19 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
             <Text style={styles.unrecorded}>{t("detail.statsMissing")}</Text>
           )}
         </View>
+
+        <EvolutionSection
+          speciesId={speciesId}
+          known={(id) => seenSpeciesIds.includes(id) || caughtSpeciesIds.includes(id) || party.some((m) => m.speciesId === id)}
+          onOpen={(id) => navigation.push("CreatureDetail", { source: "species", speciesId: id })}
+        />
+
+        {dexEntry?.era && dexEntry.era !== "wild" && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t("detail.era")}</Text>
+            <Text style={styles.flavorText}>{c.era(dexEntry.era)}</Text>
+          </View>
+        )}
 
         {signatureMove && (
           <View style={styles.section}>
@@ -306,53 +299,7 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
         )}
       </ScrollView>
 
-      <Modal visible={showItems} transparent animationType="none" onRequestClose={() => setShowItems(false)}>
-        <View style={styles.sheetBackdrop}>
-          <View style={styles.sheet}>
-            <Text style={styles.sectionTitle}>{t("detail.useItem")}</Text>
-            {applicableItems.map((item) => (
-              <Pressable
-                key={item.id}
-                testID={`detail-use-item-${item.id}`}
-                onPress={() => handleUseItem(item.id)}
-                style={styles.sheetRow}
-              >
-                <Text style={styles.flavorText}>
-                  {c.item(item.id)} <Text style={styles.xpText}>x{inventory[item.id] ?? 0}</Text>
-                </Text>
-                <Text style={styles.xpText}>
-                  {item.effect === "heal" ? t("common.healPlus", { amount: item.healAmount ?? 0 }) : t("common.levelPlus")}
-                </Text>
-              </Pressable>
-            ))}
-            <PrimaryButton label={t("common.close")} variant="secondary" onPress={() => setShowItems(false)} />
-          </View>
-        </View>
-      </Modal>
-
-      {evolutionReveal ? (
-        <EvolutionModal data={evolutionReveal} onDismiss={() => setEvolutionReveal(null)} />
-      ) : levelUpReveal ? (
-        <LevelUpModal data={levelUpReveal} onDismiss={() => setLevelUpReveal(null)} />
-      ) : (
-        movePrompts.length > 0 && (
-          <MoveLearnModal
-            prompt={movePrompts[0]}
-            onReplace={(forgetMoveId) => {
-              replacePartyMemberMove(movePrompts[0].uid, forgetMoveId, movePrompts[0].newMoveId);
-              setItemFeedback(
-                t("battle.forgotLearned", {
-                  name: movePrompts[0].displayName,
-                  old: c.move(forgetMoveId),
-                  new: c.move(movePrompts[0].newMoveId),
-                })
-              );
-              setMovePrompts((prev) => prev.slice(1));
-            }}
-            onSkip={() => setMovePrompts((prev) => prev.slice(1))}
-          />
-        )
-      )}
+      {itemFlow.overlays}
 
       <PrimaryButton testID="back-button" label={t("common.back")} variant="secondary" onPress={() => navigation.goBack()} />
     </ScreenBackground>
@@ -514,6 +461,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: colors.surfaceAlt,
   },
+  linkText: {
+    color: colors.accentDeep,
+    fontWeight: "700",
+  },
   moveRowPressed: {
     opacity: 0.75,
   },
@@ -600,24 +551,5 @@ const styles = StyleSheet.create({
   },
   useItemButtonTextDisabled: {
     color: colors.textMuted,
-  },
-  sheetBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    gap: 12,
-  },
-  sheetRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
 });

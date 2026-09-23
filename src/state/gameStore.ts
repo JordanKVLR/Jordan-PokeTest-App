@@ -1,3 +1,4 @@
+import { moveItem } from "../game/reorder";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -106,6 +107,9 @@ interface GameState {
   /** Moves the given party member to the front of the party order, so it leads future battles
    * (the battle screen always picks the first conscious member as the active fighter). */
   setMainPartyMember: (uid: string) => void;
+  /** Moves a party member from one slot to another — the Party screen's drag and drop. The
+   * first conscious member leads the next battle. */
+  reorderParty: (fromIndex: number, toIndex: number) => void;
   /** Renames a party member's displayName (a nickname); ignores blank input. */
   renamePartyMember: (uid: string, name: string) => void;
   /** Healing Center: fully revives every KO'd (currentHp <= 0) party member to max HP.
@@ -281,6 +285,11 @@ export const useGameStore = create<GameState>()(
       if (index <= 0) return; // already main, or not found
       const reordered = [party[index], ...party.slice(0, index), ...party.slice(index + 1)];
       set({ party: reordered });
+    },
+
+    reorderParty: (fromIndex, toIndex) => {
+      if (fromIndex === toIndex) return;
+      set((state) => ({ party: moveItem(state.party, fromIndex, toIndex) }));
     },
 
     renamePartyMember: (uid, name) => {
