@@ -3,6 +3,7 @@ import { Animated, Modal, Pressable, StyleSheet, Text, View } from "react-native
 import { getMove } from "../../game/movesRepo";
 import { TypeBadge } from "./TypeBadge";
 import { colors } from "../theme";
+import { useI18n } from "../../i18n";
 
 export interface MoveLearnPrompt {
   /** Who is learning. */
@@ -28,7 +29,10 @@ export function MoveLearnModal({
   onReplace: (forgetMoveId: string) => void;
   onSkip: () => void;
 }) {
+  const { t, c } = useI18n();
   const newMove = getMove(prompt.newMoveId);
+  const meta = (move: typeof newMove) =>
+    `${move.category === "status" ? t("move.status") : `${move.power} ${t("move.power").toLowerCase()}`} · ${move.accuracy}% · ${move.pp} ${t("move.pp")}`;
   const pulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -48,21 +52,17 @@ export function MoveLearnModal({
     <Modal visible transparent animationType="fade" onRequestClose={onSkip}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.title}>{prompt.displayName} wants to learn</Text>
+          <Text style={styles.title}>{t("learn.wants", { name: prompt.displayName })}</Text>
 
           <Animated.View style={[styles.newMoveCard, { borderColor: glow }]}>
             <View style={styles.moveRow}>
-              <Text style={styles.newMoveName}>{newMove.name}</Text>
+              <Text style={styles.newMoveName}>{c.move(newMove.id)}</Text>
               <TypeBadge type={newMove.type} />
             </View>
-            <Text style={styles.moveMeta}>
-              {newMove.category === "status" ? "Status" : `${newMove.power} power`} · {newMove.accuracy}% · {newMove.pp} PP
-            </Text>
+            <Text style={styles.moveMeta}>{meta(newMove)}</Text>
           </Animated.View>
 
-          <Text style={styles.prompt}>
-            But it already knows four moves. Choose one to forget, or keep the current set.
-          </Text>
+          <Text style={styles.prompt}>{t("learn.full")}</Text>
 
           {prompt.currentMoveIds.map((moveId) => {
             const move = getMove(moveId);
@@ -74,18 +74,16 @@ export function MoveLearnModal({
                 style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
               >
                 <View style={styles.moveRow}>
-                  <Text style={styles.optionName}>{move.name}</Text>
+                  <Text style={styles.optionName}>{c.move(move.id)}</Text>
                   <TypeBadge type={move.type} />
                 </View>
-                <Text style={styles.moveMeta}>
-                  {move.category === "status" ? "Status" : `${move.power} power`} · {move.accuracy}% · {move.pp} PP
-                </Text>
+                <Text style={styles.moveMeta}>{meta(move)}</Text>
               </Pressable>
             );
           })}
 
           <Pressable testID="skip-move-learn" onPress={onSkip} style={styles.skip}>
-            <Text style={styles.skipText}>Don't learn {newMove.name}</Text>
+            <Text style={styles.skipText}>{t("learn.skip", { move: c.move(newMove.id) })}</Text>
           </Pressable>
         </View>
       </View>

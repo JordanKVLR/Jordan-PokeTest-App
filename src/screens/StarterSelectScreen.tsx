@@ -8,6 +8,7 @@ import { PrimaryButton } from "./components/PrimaryButton";
 import { TypeBadge } from "./components/TypeBadge";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { colors } from "./theme";
+import { useI18n } from "../i18n";
 
 type Props = NativeStackScreenProps<RootStackParamList, "StarterSelect">;
 
@@ -23,6 +24,7 @@ export function StarterSelectScreen({ navigation }: Props) {
   const starterLine = starters.find((s) => s.line === selectedLine);
   const stageOne = starterLine?.stages[0];
   const partner = party[0];
+  const { t, c } = useI18n();
 
   const handleConfirm = () => {
     // Exploring (the Map) is the default screen — reset straight into it
@@ -33,31 +35,29 @@ export function StarterSelectScreen({ navigation }: Props) {
   if (!starterLine || !stageOne) {
     return (
       <ScreenBackground style={styles.container}>
-        <Text style={styles.title}>No partner chosen yet</Text>
-        <PrimaryButton label="Take the Quiz" onPress={() => navigation.navigate("StarterQuiz")} />
+        <Text style={styles.title}>{t("starter.none")}</Text>
+        <PrimaryButton label={t("starter.takeQuiz")} onPress={() => navigation.navigate("StarterQuiz")} />
       </ScreenBackground>
     );
   }
 
   return (
     <ScreenBackground style={styles.container}>
-      <Text style={styles.eyebrow}>The islands have decided</Text>
-      <Text style={styles.title}>
-        {playerName}, your partner is {stageOne.name}!
-      </Text>
+      <Text style={styles.eyebrow}>{t("starter.eyebrow")}</Text>
+      <Text style={styles.title}>{t("starter.partner", { player: playerName, creature: stageOne.name })}</Text>
 
       <View style={styles.card}>
         <Text style={styles.name}>{stageOne.name}</Text>
         <View style={styles.badgeRow}>
-          {stageOne.types.map((t) => (
-            <TypeBadge key={t} type={t} />
+          {stageOne.types.map((type) => (
+            <TypeBadge key={type} type={type} />
           ))}
         </View>
-        <Text style={styles.signature}>Signature move: {starterLine.signatureMove}</Text>
-        {partner && <Text style={styles.level}>Starting level {partner.level}</Text>}
+        <Text style={styles.signature}>{t("starter.signature", { move: c.signature(starterLine.signatureMove) })}</Text>
+        {partner && <Text style={styles.level}>{t("starter.startingLevel", { level: partner.level })}</Text>}
       </View>
 
-      <PrimaryButton testID="confirm-starter" label="Confirm" onPress={handleConfirm} />
+      <PrimaryButton testID="confirm-starter" label={t("starter.confirm")} onPress={handleConfirm} />
     </ScreenBackground>
   );
 }

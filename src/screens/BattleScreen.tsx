@@ -42,8 +42,13 @@ import { VictoryOverlay } from "./components/VictoryOverlay";
 import { ElementalTransition } from "./components/ElementalTransition";
 import { BattleMessage } from "./components/BattleMessage";
 import { getMap, findTilePosition } from "../game/mapData";
-import { getZoneName } from "../game/zones";
 import { colors } from "./theme";
+import { MoveDetailCard } from "./components/MoveDetailCard";
+import { useI18n } from "../i18n";
+import { useSettings } from "../state/settingsStore";
+import { autoAdvanceMs, type MessageKind } from "../game/settings";
+import { trainerLines } from "../game/trainers";
+import type { BoastRef } from "../i18n/boasts";
 
 /** Chance a defeated or caught wild creature drops a Kinnie — rare, never sold. */
 const KINNIE_DROP_CHANCE = 0.1;
@@ -52,13 +57,16 @@ type Props = NativeStackScreenProps<RootStackParamList, "Battle">;
 
 const WILD_BASE_CATCH_RATE = 190;
 const MAX_LOG_LINES = 5;
-/** Pause between the first and second actor's reveal, so each turn plays out in two beats rather than instantly. */
 /** How long the strike plays before its result is shown — long enough to see the hit land. */
 const STRIKE_PLAY_MS = 620;
 
-/** One thing the battle has to tell the player, and what happens once they acknowledge it. */
+/** One thing the battle has to tell the player, and what happens once it has been read. */
 interface BattlePopup {
+  /** Unique per popup, so a timer and a tap can never both advance the same one. */
+  id: number;
   lines: string[];
+  /** Decides, with the pace setting, whether it moves on by itself. */
+  kind: MessageKind;
   after?: () => void;
   emphasis?: "none" | "good" | "bad";
 }
@@ -127,6 +135,14 @@ export function BattleScreen({ navigation, route }: Props) {
   const [completion, setCompletion] = useState<CompletionProgress | null>(null);
   const healFaintedPartyMembers = useGameStore((s) => s.healFaintedPartyMembers);
   const party = useGameStore((s) => s.party);
+  const i18n = useI18n();
+  const { t, c, plural } = i18n;
+  const battlePace = useSettings((s) => s.battlePace);
+  const textSpeed = useSettings((s) => s.textSpeed);
+  const trainerIntros = useSettings((s) => s.trainerIntros);
+  const textSize = useSettings((s) => s.textSize);
+  /** The move whose details sheet is open, if any. */
+  const [inspecting, setInspecting] = useState<string | null>(null);
 
   const [activeUid] = useState<string | undefined>(() => party.find((m) => m.currentHp > 0)?.uid);
   const activeUidRef = useRef(activeUid);
@@ -184,13 +200,14 @@ export function BattleScreen({ navigation, route }: Props) {
 
   const [snapshot, setSnapshot] = useState<BattleSnapshot | null>(() => (fsm ? snapshotFrom(fsm.getContext()) : null));
   // One of the trainer's lines, chosen as the battle opens so a rematch does not replay it.
-  const [boast] = useState<string | null>(() => {
+  const [boast] = useState<BoastRef | null>(() => {
     if (!trainer?.boasts?.length) return null;
     return trainer.boasts[Math.floor(Math.random() * trainer.boasts.length)];
   });
-  // Trainer fights open on an elemental wipe carrying that line; wild encounters start straight
-  // away, because the grass has nothing to say.
-  const [intro, setIntro] = useState(() => Boolean(trainer));
+  // Trainer fights open on an elemental wipe carrying that line — unless the player has asked
+  // for brief introductions. Wild encounters start straight away: the grass has nothing to say.
+  const [intro, setIntro] = useState(() => Boolean(trainer) && useSettings.getState().trainerIntros === "full");
+  const lines = trainer ? trainerLines(trainer, i18n, boast ?? undefined) : null;
   const [log, setLog] = useState<string[]>([]);
   const [outcome, setOutcome] = useState<Outcome>(null);
   const [rewards, setRewards] = useState<BattleRewards | null>(null);
@@ -202,11 +219,13 @@ export function BattleScreen({ navigation, route }: Props) {
   /**
    * Everything the battle wants to tell the player, one popup at a time.
    *
-   * Nothing in a fight advances on a timer any more. A beat is queued, the player reads it and
-   * taps, and only then does the next thing happen — which is what `after` carries. Turn
-   * resolution is therefore driven by dismissals rather than setTimeout chains.
+   * A beat is queued and the next thing happens only once it is done with — which is what
+   * `after` carries. Whether "done" means a tap or a moment passing is the Battle pace setting:
+   * by default a chosen action plays on its own after a second, and what it did waits to be
+   * read. Turn resolution is driven by these, never by a free-running setTimeout chain.
    */
   const [popups, setPopups] = useState<BattlePopup[]>([]);
+  const popupIdRef = useRef(0);
   const [levelUpReveal, setLevelUpReveal] = useState<LevelUpRevealData | null>(null);
   /** Takes priority over levelUpReveal — an evolution reveal always plays first, then falls
    * through to the stat-comparison screen once dismissed (see the render's priority chain). */
@@ -233,7 +252,7 @@ export function BattleScreen({ navigation, route }: Props) {
    */
   function queueMoveLearning(member: PartyMember, learning: MoveLearnResult) {
     for (const moveId of learning.learned) {
-      pushLog([`${member.displayName} learned ${getMove(moveId).name}!`]);
+      pushLog([t("battle.learned", { name: member.displayName, move: c.move(moveId) })]);
     }
     if (learning.pending.length > 0) {
       setMovePrompts((prev) => [
@@ -250,7 +269,7 @@ export function BattleScreen({ navigation, route }: Props) {
 
   /** Wild creatures are "Wild X"; a trainer's creature is just itself. */
   function foeLabel(name: string): string {
-    return isTrainerBattle ? name : `Wild ${name}`;
+    return isTrainerBattle ? name : t("battle.wildName", { name });
   }
 
   function pushLog(lines: string[]) {
@@ -262,21 +281,29 @@ export function BattleScreen({ navigation, route }: Props) {
    * complete) and on screen as a box the player has to dismiss. `after` runs on that dismissal,
    * which is how a turn steps forward.
    */
-  function say(lines: string[], options: { after?: () => void; emphasis?: BattlePopup["emphasis"] } = {}) {
+  function say(
+    lines: string[],
+    kind: MessageKind,
+    options: { after?: () => void; emphasis?: BattlePopup["emphasis"] } = {}
+  ) {
     const text = lines.filter(Boolean);
     if (text.length === 0) {
       options.after?.();
       return;
     }
     pushLog(text);
-    setPopups((prev) => [...prev, { lines: text, after: options.after, emphasis: options.emphasis }]);
+    popupIdRef.current += 1;
+    const popup: BattlePopup = { id: popupIdRef.current, lines: text, kind, ...options };
+    setPopups((prev) => [...prev, popup]);
   }
 
-  function advancePopup() {
+  /** Moves past one popup. Keyed by id, so a tap landing as the timer fires only counts once. */
+  function advancePopup(id: number) {
     const current = popups[0];
-    setPopups((prev) => prev.slice(1));
+    if (!current || current.id !== id) return;
+    setPopups((prev) => (prev[0]?.id === id ? prev.slice(1) : prev));
     // Run the continuation after the slice so anything it queues lands behind what is left.
-    current?.after?.();
+    current.after?.();
   }
 
   /** The enemy is rationed too, so it can't spam a 6-PP heavy hitter all battle. Falls back
@@ -294,7 +321,7 @@ export function BattleScreen({ navigation, route }: Props) {
     const dropped = Math.random() < KINNIE_DROP_CHANCE;
     if (dropped) {
       addItem("kinnie", 1);
-      say([`Wild ${enemy.displayName} dropped a Kinnie!`], { emphasis: "good" });
+      say([t("battle.kinnie", { name: enemy.displayName })], "key", { emphasis: "good" });
     }
     return dropped;
   }
@@ -312,17 +339,17 @@ export function BattleScreen({ navigation, route }: Props) {
 
     if (trainer) {
       markTrainerDefeated(trainer.id);
-      say([trainer.defeatLine], { emphasis: "good" });
+      say([lines!.defeat], "key", { emphasis: "good" });
       if (trainer.medalId) {
         awardMedal(trainer.medalId);
-        say([`You earned the ${trainer.medalName}!`], { emphasis: "good" });
+        say([t("battle.medal", { medal: lines!.medal })], "key", { emphasis: "good" });
       }
       // Beating everyone is the win condition. The store update above is async as far as this
       // render is concerned, so count this trainer in by hand rather than reading it back.
       const progress = completionProgress([...defeatedTrainerIds, trainer.id]);
       if (progress.complete) {
         setCompletion(progress);
-        say(["There is no one left to fight."], { emphasis: "good" });
+        say([t("battle.noOneLeft")], "key", { emphasis: "good" });
       }
     }
 
@@ -371,22 +398,30 @@ export function BattleScreen({ navigation, route }: Props) {
   useEffect(() => {
     if (openedRef.current || trainer) return;
     openedRef.current = true;
-    say([`A wild ${enemy.displayName} appeared!`]);
+    say([t("battle.appeared", { name: enemy.displayName })], "info");
     // Only on mount: this is the battle's opening beat, not something that re-fires.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function openTrainerBattle() {
-    if (openedRef.current || !trainer) return;
+    if (openedRef.current || !trainer || !lines) return;
     openedRef.current = true;
-    say([trainer.intro]);
-    if (boast) say([`${trainer.name}: "${boast}"`]);
-    say([`They send out ${enemyTeam[0]?.displayName ?? "a creature"}!`]);
+    say([lines.intro], "info");
+    // Brief introductions skip the trainer's line along with the wipe that carries it.
+    if (lines.boast && trainerIntros === "full") say([t("battle.says", { name: trainer.name, line: lines.boast })], "info");
+    say([t("battle.sendsOutFirst", { name: enemyTeam[0]?.displayName ?? "" })], "info");
   }
+
+  // With brief introductions there is no wipe to open the fight, so open it straight away.
+  useEffect(() => {
+    if (trainer && !intro) openTrainerBattle();
+    // Only on mount, same as the wild opening above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function labelForCreature(creature: Creature, playerActiveId: string): string {
     if (creature.id === playerActiveId) {
-      return party.find((m) => m.uid === creature.id)?.displayName ?? "Your creature";
+      return party.find((m) => m.uid === creature.id)?.displayName ?? t("battle.yourCreature");
     }
     return foeLabel(enemy.displayName);
   }
@@ -395,24 +430,24 @@ export function BattleScreen({ navigation, route }: Props) {
    * crit, type effectiveness, and a faint — matching the mainline games' battle text. */
   function resultLinesFor(outcome: ActionOutcome, playerActiveId: string): string[] {
     if (outcome.action.kind !== "move" || !outcome.target) return [];
-    if (!outcome.hit) return ["But it missed!"];
+    if (!outcome.hit) return [t("battle.missed")];
 
     const move = getMove(outcome.action.moveId);
     const lines: string[] = [];
 
     if (move.category !== "status") {
-      lines.push(`Dealt ${outcome.damage} damage!`);
-      if (outcome.crit) lines.push("A critical hit!");
+      lines.push(t("battle.damage", { amount: outcome.damage }));
+      if (outcome.crit) lines.push(t("battle.crit"));
 
       const multiplier = getTypeMultiplier(move.type, outcome.target.types);
-      if (multiplier > 1) lines.push("It's super effective!");
-      else if (multiplier > 0 && multiplier < 1) lines.push("It's not very effective...");
-      else if (multiplier === 0) lines.push("It had no effect...");
+      if (multiplier > 1) lines.push(t("battle.superEffective"));
+      else if (multiplier > 0 && multiplier < 1) lines.push(t("battle.notVeryEffective"));
+      else if (multiplier === 0) lines.push(t("battle.noEffect"));
     }
 
     lines.push(...statChangeLines(outcome, playerActiveId));
 
-    if (outcome.target.currentHp <= 0) lines.push(`${labelForCreature(outcome.target, playerActiveId)} fainted!`);
+    if (outcome.target.currentHp <= 0) lines.push(t("battle.fainted", { name: labelForCreature(outcome.target, playerActiveId) }));
     return lines;
   }
 
@@ -423,11 +458,11 @@ export function BattleScreen({ navigation, route }: Props) {
     return outcome.statChanges.map((change) => {
       const affected = change.target === "self" ? outcome.actor : outcome.target!;
       const who = labelForCreature(affected, playerActiveId);
-      if (change.stages === 0) return `${who}'s ${change.statName} won't go any further!`;
-      const magnitude = Math.abs(change.stages) >= 2 ? " sharply" : "";
-      return change.stages > 0
-        ? `${who}'s ${change.statName} rose${magnitude}!`
-        : `${who}'s ${change.statName} fell${magnitude}!`;
+      const params = { name: who, stat: c.stat(change.stat) };
+      if (change.stages === 0) return t("battle.statCapped", params);
+      const sharply = Math.abs(change.stages) >= 2;
+      if (change.stages > 0) return t(sharply ? "battle.statRoseSharply" : "battle.statRose", params);
+      return t(sharply ? "battle.statFellSharply" : "battle.statFell", params);
     });
   }
 
@@ -467,7 +502,7 @@ export function BattleScreen({ navigation, route }: Props) {
 
       const announceLines = isPlayer
         ? playerLines
-        : [`${foeLabel(enemy.displayName)} used ${getMove(enemyMoveId).name}.`];
+        : [t("battle.foeUsed", { name: foeLabel(enemy.displayName), move: c.move(enemyMoveId) })];
 
       function applyReaction() {
         if (outcome.hit && outcome.target) {
@@ -483,7 +518,7 @@ export function BattleScreen({ navigation, route }: Props) {
       function reportResult() {
         const fainted = Boolean(outcome.target && outcome.target.currentHp <= 0);
         const emphasis = fainted ? (isPlayer ? "good" : "bad") : "none";
-        say(resultLinesFor(outcome, playerActiveId), {
+        say(resultLinesFor(outcome, playerActiveId), "result", {
           emphasis,
           after: () => revealBeat(index + 1),
         });
@@ -491,7 +526,7 @@ export function BattleScreen({ navigation, route }: Props) {
 
       // Two beats per action: who is doing what, then — after the strike has actually played —
       // what it did. The damage number is never on screen for less time than it takes to read.
-      say(announceLines, {
+      say(announceLines, "action", {
         after: () => {
           if (outcome.action.kind === "move") {
             actingAnim.windUp();
@@ -525,7 +560,7 @@ export function BattleScreen({ navigation, route }: Props) {
         const nextIndex = enemyIndex + 1;
         if (isTrainerBattle && nextIndex < enemyTeam.length) {
           const nextFoe = enemyTeam[nextIndex];
-          say([`${trainer!.name} sends out ${nextFoe.displayName}!`]);
+          say([t("battle.sendsOut", { trainer: trainer!.name, name: nextFoe.displayName })], "info");
           setEnemyIndex(nextIndex);
           enemyPpRef.current = {};
           // Swap the new foe into the live context and restart the machine around it.
@@ -563,10 +598,10 @@ export function BattleScreen({ navigation, route }: Props) {
 
     if (forced) {
       setForcedSwitchPending(false);
-      say([`Go, ${member.displayName}!`]);
+      say([t("battle.go", { name: member.displayName })], "action");
     } else {
       setShowParty(false);
-      runTurn({ kind: "switch", actorId: newCreature.id, targetPartyIndex: 0 }, [`Go, ${member.displayName}!`]);
+      runTurn({ kind: "switch", actorId: newCreature.id, targetPartyIndex: 0 }, [t("battle.go", { name: member.displayName })]);
     }
   }
 
@@ -579,7 +614,7 @@ export function BattleScreen({ navigation, route }: Props) {
     return popups.length > 0;
   }
 
-  function handleMove(moveId: string, moveName: string) {
+  function handleMove(moveId: string) {
     if (awaitingAcknowledgement()) return;
     if (outcome || forcedSwitchPending || resolving || !fsm || fsm.getState() !== "ACTION_SELECT") return;
     if (!activeMember) return;
@@ -589,7 +624,7 @@ export function BattleScreen({ navigation, route }: Props) {
       spendPp(activeMember.uid, moveId);
     }
     const ctx = fsm.getContext();
-    runTurn({ kind: "move", actorId: ctx.playerActive.id, moveId }, [`You used ${moveName}.`]);
+    runTurn({ kind: "move", actorId: ctx.playerActive.id, moveId }, [t("battle.youUsed", { move: c.move(moveId) })]);
   }
 
   function handleInvokeCrux() {
@@ -597,21 +632,21 @@ export function BattleScreen({ navigation, route }: Props) {
     if (!fsm || !snapshot || outcome || forcedSwitchPending || resolving) return;
     if (fsm.getState() !== "ACTION_SELECT" || snapshot.playerCruxOnCooldown) return;
     const ctx = fsm.getContext();
-    const name = activeMember?.displayName ?? "Your creature";
+    const name = activeMember?.displayName ?? t("battle.yourCreature");
     playerAnim.cruxGlow();
     stageRef.current?.cruxBurst();
-    runTurn({ kind: "invoke_crux", actorId: ctx.playerActive.id }, [`${name} invokes the Crux Aura!`]);
+    runTurn({ kind: "invoke_crux", actorId: ctx.playerActive.id }, [t("battle.crux", { name })]);
   }
 
   function handleFlee() {
     if (awaitingAcknowledgement()) return;
     if (!fsm || outcome || forcedSwitchPending || resolving || fsm.getState() !== "ACTION_SELECT") return;
     if (isTrainerBattle) {
-      say(["There's no running from a challenge."]);
+      say([t("battle.noRunning")], "info");
       return;
     }
     playerAnim.fleeOut();
-    say(["You turned tail and ran!"], { after: () => setOutcome("fled") });
+    say([t("battle.ran")], "info", { after: () => setOutcome("fled") });
   }
 
   const applicableItems = usableItems().filter((item) => (inventory[item.id] ?? 0) > 0);
@@ -636,8 +671,8 @@ export function BattleScreen({ navigation, route }: Props) {
       stageRef.current?.itemFlash("#7ddba0");
 
       runTurn({ kind: "item", actorId: ctx.playerActive.id, itemId }, [
-        `You used the ${item.name}!`,
-        `${name} recovered ${healedAmount} HP!`,
+        t("battle.usedItem", { item: c.item(item.id) }),
+        t("battle.recovered", { name, amount: healedAmount }),
       ]);
       return;
     }
@@ -681,10 +716,10 @@ export function BattleScreen({ navigation, route }: Props) {
         playerAnim.heal();
 
         runTurn({ kind: "item", actorId: ctx.playerActive.id, itemId }, [
-          `You used the ${item.name}!`,
+          t("battle.usedItem", { item: c.item(item.id) }),
           evolution
-            ? `${evolution.oldDisplayName} evolved into ${evolution.newDisplayName}!`
-            : `${name} grew to level ${leveledMember.level}!`,
+            ? t("battle.evolved", { old: evolution.oldDisplayName, new: evolution.newDisplayName })
+            : t("battle.grewTo", { name, level: leveledMember.level }),
         ]);
       };
     }
@@ -726,11 +761,10 @@ export function BattleScreen({ navigation, route }: Props) {
         earnCurrency(money);
         say(
           [
-            `You threw a ${availableBall.name}!`,
-            added
-              ? `Gotcha! Wild ${enemy.displayName} was caught!`
-              : `Gotcha! ...but your party is full (6/6), so it couldn't be kept.`,
+            t("battle.threw", { item: c.item(availableBall.id) }),
+            added ? t("battle.caught", { name: enemy.displayName }) : t("battle.caughtFull"),
           ],
+          "key",
           { emphasis: added ? "good" : "bad" }
         );
         const kinnieDropped = rollKinnieDrop();
@@ -741,9 +775,7 @@ export function BattleScreen({ navigation, route }: Props) {
       }
 
       runTurn({ kind: "item", actorId: ctx.playerActive.id, itemId: availableBall.id }, [
-        `You threw a ${availableBall.name}! It broke free after ${result.shakesPassed} shake${
-          result.shakesPassed === 1 ? "" : "s"
-        }.`,
+        plural(result.shakesPassed, "battle.brokeFreeOne", "battle.brokeFreeMany", { item: c.item(availableBall.id) }),
       ]);
     }, BALL_TRAVEL_MS);
   }
@@ -765,11 +797,9 @@ export function BattleScreen({ navigation, route }: Props) {
   if (!activeMember || !fsm || !snapshot) {
     return (
       <View style={styles.container}>
-        <Text style={styles.resultTitle}>No able-to-battle creature</Text>
-        <Text style={styles.resultSubtitle}>
-          Your whole party may be fainted, or you haven't picked a starter yet. Head back to Home to sort it out.
-        </Text>
-        <PrimaryButton label="Return to Home" onPress={() => navigation.popToTop()} />
+        <Text style={styles.resultTitle}>{t("battle.noCreature")}</Text>
+        <Text style={styles.resultSubtitle}>{t("battle.noCreatureBody")}</Text>
+        <PrimaryButton label={t("battle.returnHome")} onPress={() => navigation.popToTop()} />
       </View>
     );
   }
@@ -807,7 +837,7 @@ export function BattleScreen({ navigation, route }: Props) {
 
       <ScrollView style={styles.log} contentContainerStyle={styles.logContent}>
         {log.map((line, i) => (
-          <Text key={i} style={styles.logLine}>
+          <Text key={i} style={[styles.logLine, textSize === "large" && styles.logLineLarge]}>
             {line}
           </Text>
         ))}
@@ -821,13 +851,18 @@ export function BattleScreen({ navigation, route }: Props) {
             <HoverTip
               key={move.id}
               style={styles.moveButtonHoverWrap}
-              text={`${move.category === "status" ? "Status" : move.category === "special" ? "Special" : "Physical"} ${move.type} move. ${
-                move.category === "status" ? "No damage" : `Power ${move.power}`
-              }, accuracy ${move.accuracy}%. ${pp} of ${move.pp} uses left — rest at a Healing Centre to restore them.`}
+              text={t("battle.tip.move", {
+                category: t(move.category === "physical" ? "move.physical" : move.category === "special" ? "move.special" : "move.status"),
+                type: c.type(move.type),
+                power: move.category === "status" ? t("battle.tip.noDamage") : t("battle.tip.power", { power: move.power }),
+                accuracy: move.accuracy,
+                pp,
+                max: move.pp,
+              })}
             >
               <Pressable
                 testID={`move-${move.id}`}
-                onPress={() => handleMove(move.id, move.name)}
+                onPress={() => handleMove(move.id)}
                 disabled={actionsDisabled || spent}
                 style={({ pressed }) => [
                   styles.moveButton,
@@ -836,7 +871,7 @@ export function BattleScreen({ navigation, route }: Props) {
                 ]}
               >
                 <View style={styles.moveHeaderRow}>
-                  <Text style={[styles.moveName, spent && styles.moveNameSpent]}>{move.name}</Text>
+                  <Text style={[styles.moveName, spent && styles.moveNameSpent]}>{c.move(move.id)}</Text>
                   <Text style={[styles.movePp, spent && styles.movePpSpent]}>
                     {pp}/{move.pp}
                   </Text>
@@ -844,9 +879,24 @@ export function BattleScreen({ navigation, route }: Props) {
                 <View style={styles.moveMetaRow}>
                   <TypeBadge type={move.type} />
                   <Text style={styles.moveMeta}>
-                    {move.category === "status" ? "status" : `${move.power} pwr`} · {move.accuracy}%
+                    {move.category === "status"
+                      ? t("battle.moveStatus", { accuracy: move.accuracy })
+                      : t("battle.movePower", { power: move.power, accuracy: move.accuracy })}
                   </Text>
                 </View>
+                {/* Opens the full description without spending the turn — the one thing on
+                    this button that does not choose the move. */}
+                <Pressable
+                  testID={`move-info-${move.id}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t("battle.moveInfo")}: ${c.move(move.id)}`}
+                  hitSlop={8}
+                  onPress={() => setInspecting(move.id)}
+                  disabled={!!outcome}
+                  style={({ pressed }) => [styles.moveInfoButton, pressed && styles.moveInfoButtonPressed]}
+                >
+                  <Text style={styles.moveInfoGlyph}>i</Text>
+                </Pressable>
               </Pressable>
             </HoverTip>
           );
@@ -854,25 +904,25 @@ export function BattleScreen({ navigation, route }: Props) {
         {outOfPp && (
           <HoverTip
             style={styles.moveButtonHoverWrap}
-            text="Every move is spent. Scrap is a weak last resort that never runs out — head for a Healing Centre."
+            text={t("battle.tip.scrap")}
           >
             <Pressable
               testID="move-scrap"
-              onPress={() => handleMove(LAST_RESORT_MOVE_ID, lastResortMove.name)}
+              onPress={() => handleMove(LAST_RESORT_MOVE_ID)}
               disabled={actionsDisabled}
               style={({ pressed }) => [styles.moveButton, styles.scrapButton, pressed && styles.moveButtonPressed]}
             >
               <View style={styles.moveHeaderRow}>
-                <Text style={styles.moveName}>{lastResortMove.name}</Text>
+                <Text style={styles.moveName}>{c.move(lastResortMove.id)}</Text>
                 <Text style={styles.movePp}>∞</Text>
               </View>
-              <Text style={styles.moveMeta}>last resort — everything else is spent</Text>
+              <Text style={styles.moveMeta}>{t("battle.lastResortMeta")}</Text>
             </Pressable>
           </HoverTip>
         )}
         <HoverTip
           style={styles.moveButtonHoverWrap}
-          text="Boosts your creature's stats for a few turns, then goes on cooldown. Costs the turn to activate."
+          text={t("battle.tip.crux")}
         >
           <Pressable
             testID="invoke-crux"
@@ -885,13 +935,13 @@ export function BattleScreen({ navigation, route }: Props) {
               pressed && styles.moveButtonPressed,
             ]}
           >
-            <Text style={styles.moveName}>Invoke Crux</Text>
-            <Text style={styles.cruxHint}>{snapshot.playerCruxOnCooldown ? "on cooldown" : "costs the turn"}</Text>
+            <Text style={styles.moveName}>{t("battle.invokeCrux")}</Text>
+            <Text style={styles.cruxHint}>{snapshot.playerCruxOnCooldown ? t("battle.cruxCooldown") : t("battle.cruxCost")}</Text>
           </Pressable>
         </HoverTip>
         <HoverTip
           style={styles.moveButtonHoverWrap}
-          text="Throw a ball to try to catch the wild creature. Lower HP and status conditions improve the odds. If it breaks free, the turn is still spent."
+          text={t("battle.tip.trap")}
         >
           <Pressable
             testID="catch-ball"
@@ -905,18 +955,14 @@ export function BattleScreen({ navigation, route }: Props) {
             ]}
           >
             <Text style={styles.moveName}>
-              {isTrainerBattle ? "Can't Trap" : hasTraps ? "Throw a Trap" : "No traps left"}
+              {isTrainerBattle ? t("battle.cantTrap") : hasTraps ? t("battle.throwTrap") : t("battle.noTraps")}
             </Text>
             <Text style={styles.cruxHint}>
-              {isTrainerBattle
-                ? "that creature belongs to someone"
-                : hasTraps
-                  ? "choose which one — costs the turn if it fails"
-                  : "check your Bag"}
+              {isTrainerBattle ? t("battle.cantTrapSub") : hasTraps ? t("battle.trapChoose") : t("battle.noTrapsSub")}
             </Text>
           </Pressable>
         </HoverTip>
-        <HoverTip style={styles.moveButtonHoverWrap} text="Send out a different party member. Voluntary switches cost the turn; a fainted lead gets a free forced switch instead.">
+        <HoverTip style={styles.moveButtonHoverWrap} text={t("battle.tip.party")}>
           <Pressable
             testID="open-party-sheet"
             onPress={() => setShowParty(true)}
@@ -928,10 +974,10 @@ export function BattleScreen({ navigation, route }: Props) {
               pressed && styles.moveButtonPressed,
             ]}
           >
-            <Text style={styles.moveName}>Party</Text>
+            <Text style={styles.moveName}>{t("battle.party")}</Text>
           </Pressable>
         </HoverTip>
-        <HoverTip style={styles.moveButtonHoverWrap} text="Use a medicine item to heal, or a Kinnie to instantly gain a level. Costs the turn.">
+        <HoverTip style={styles.moveButtonHoverWrap} text={t("battle.tip.item")}>
           <Pressable
             testID="open-item-sheet"
             onPress={() => setShowItems(true)}
@@ -943,16 +989,14 @@ export function BattleScreen({ navigation, route }: Props) {
               pressed && styles.moveButtonPressed,
             ]}
           >
-            <Text style={styles.moveName}>Use Item</Text>
-            <Text style={styles.cruxHint}>{applicableItems.length > 0 ? "heal/level up — costs the turn" : "no usable items"}</Text>
+            <Text style={styles.moveName}>{t("battle.useItem")}</Text>
+            <Text style={styles.cruxHint}>{applicableItems.length > 0 ? t("battle.itemSub") : t("battle.noItemsSub")}</Text>
           </Pressable>
         </HoverTip>
         <HoverTip
           style={styles.fleeButtonHoverWrap}
           text={
-            isTrainerBattle
-              ? "You can't walk away from a trainer's challenge — win it or black out."
-              : "Flee the encounter immediately. No reward, but no penalty either. Keyboard: R."
+            isTrainerBattle ? t("battle.tip.cantRun") : t("battle.tip.run")
           }
         >
           <Pressable
@@ -966,10 +1010,8 @@ export function BattleScreen({ navigation, route }: Props) {
               pressed && styles.moveButtonPressed,
             ]}
           >
-            <Text style={styles.moveName}>{isTrainerBattle ? "Can't Run" : "Run Away"}</Text>
-            <Text style={styles.cruxHint}>
-              {isTrainerBattle ? "no walking away from a challenge" : "flee the encounter"}
-            </Text>
+            <Text style={styles.moveName}>{isTrainerBattle ? t("battle.cantRun") : t("battle.runAway")}</Text>
+            <Text style={styles.cruxHint}>{isTrainerBattle ? t("battle.cantRunSub") : t("battle.runSub")}</Text>
           </Pressable>
         </HoverTip>
       </View>
@@ -977,11 +1019,8 @@ export function BattleScreen({ navigation, route }: Props) {
       <Modal visible={showTraps} transparent animationType="none" onRequestClose={() => setShowTraps(false)}>
         <View style={styles.sheetBackdrop}>
           <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>Throw which trap?</Text>
-            <Text style={styles.sheetNote}>
-              A sturdier trap holds better. Wearing the creature down and inflicting a status
-              condition help more than any trap does.
-            </Text>
+            <Text style={styles.sheetTitle}>{t("battle.whichTrap")}</Text>
+            <Text style={styles.sheetNote}>{t("battle.trapSheetNote")}</Text>
             {ownedTraps.map((trap) => (
               <Pressable
                 key={trap.id}
@@ -990,13 +1029,13 @@ export function BattleScreen({ navigation, route }: Props) {
                 style={({ pressed }) => [styles.sheetRow, pressed && styles.sheetRowPressed]}
               >
                 <Text style={styles.sheetCreature}>
-                  {trap.name} <Text style={styles.sheetLevel}>x{inventory[trap.id] ?? 0}</Text>
+                  {c.item(trap.id)} <Text style={styles.sheetLevel}>x{inventory[trap.id] ?? 0}</Text>
                 </Text>
-                <Text style={styles.sheetHp}>{(trap.catchMultiplier ?? 1).toFixed(1)}x catch rate</Text>
+                <Text style={styles.sheetHp}>{t("battle.catchRate", { value: (trap.catchMultiplier ?? 1).toFixed(1) })}</Text>
               </Pressable>
             ))}
-            {ownedTraps.length === 0 && <Text style={styles.sheetNote}>No traps in your Bag.</Text>}
-            <PrimaryButton label="Close" variant="secondary" onPress={() => setShowTraps(false)} />
+            {ownedTraps.length === 0 && <Text style={styles.sheetNote}>{t("battle.noTrapsInBag")}</Text>}
+            <PrimaryButton label={t("common.close")} variant="secondary" onPress={() => setShowTraps(false)} />
           </View>
         </View>
       </Modal>
@@ -1004,7 +1043,7 @@ export function BattleScreen({ navigation, route }: Props) {
       <Modal visible={showItems} transparent animationType="none" onRequestClose={() => setShowItems(false)}>
         <View style={styles.sheetBackdrop}>
           <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>Use Item</Text>
+            <Text style={styles.sheetTitle}>{t("battle.useItem")}</Text>
             {applicableItems.map((item) => (
               <Pressable
                 key={item.id}
@@ -1013,13 +1052,15 @@ export function BattleScreen({ navigation, route }: Props) {
                 style={styles.sheetRow}
               >
                 <Text style={styles.sheetCreature}>
-                  {item.name} <Text style={styles.sheetLevel}>x{inventory[item.id] ?? 0}</Text>
+                  {c.item(item.id)} <Text style={styles.sheetLevel}>x{inventory[item.id] ?? 0}</Text>
                 </Text>
-                <Text style={styles.sheetHp}>{item.effect === "heal" ? `+${item.healAmount} HP` : "+1 level"}</Text>
+                <Text style={styles.sheetHp}>
+                  {item.effect === "heal" ? t("common.healPlus", { amount: item.healAmount ?? 0 }) : t("common.levelPlus")}
+                </Text>
               </Pressable>
             ))}
-            {applicableItems.length === 0 && <Text style={styles.sheetNote}>No usable items in your Bag.</Text>}
-            <PrimaryButton label="Close" variant="secondary" onPress={() => setShowItems(false)} />
+            {applicableItems.length === 0 && <Text style={styles.sheetNote}>{t("battle.noItemsInBag")}</Text>}
+            <PrimaryButton label={t("common.close")} variant="secondary" onPress={() => setShowItems(false)} />
           </View>
         </View>
       </Modal>
@@ -1027,7 +1068,7 @@ export function BattleScreen({ navigation, route }: Props) {
       <Modal visible={showParty} transparent animationType="none" onRequestClose={() => setShowParty(false)}>
         <View style={styles.sheetBackdrop}>
           <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>Party</Text>
+            <Text style={styles.sheetTitle}>{t("battle.party")}</Text>
             {party.map((member) => {
               const isActive = member.uid === activeMember.uid;
               const fainted = member.currentHp <= 0;
@@ -1041,26 +1082,28 @@ export function BattleScreen({ navigation, route }: Props) {
                   style={[styles.sheetRow, (isActive || fainted) && styles.sheetRowDisabled]}
                 >
                   <Text style={styles.sheetCreature}>
-                    {member.displayName} <Text style={styles.sheetLevel}>Lv. {member.level}</Text>
+                    {member.displayName} <Text style={styles.sheetLevel}>{t("common.level", { level: member.level })}</Text>
                   </Text>
                   <Text style={fainted ? styles.sheetFainted : styles.sheetHp}>
-                    {fainted ? "Fainted" : isActive ? `${hp} / ${partyMemberStats(member).hp} HP (active)` : `${hp} / ${partyMemberStats(member).hp} HP`}
+                    {fainted
+                      ? t("common.fainted")
+                      : `${t("common.hp", { hp, max: partyMemberStats(member).hp })}${isActive ? ` ${t("battle.active")}` : ""}`}
                   </Text>
                 </Pressable>
               );
             })}
             <Text style={styles.sheetNote}>
-              {party.length > 1 ? "Tap a healthy party member to send them out instead — this costs the turn." : "No other party members yet — try catching one!"}
+              {party.length > 1 ? t("battle.switchHint") : t("battle.noOthers")}
             </Text>
-            <PrimaryButton label="Close" variant="secondary" onPress={() => setShowParty(false)} />
+            <PrimaryButton label={t("common.close")} variant="secondary" onPress={() => setShowParty(false)} />
           </View>
         </View>
       </Modal>
 
       {forcedSwitchPending && (
         <View style={styles.resultOverlay}>
-          <Text style={styles.resultTitle}>{activeMember.displayName} fainted!</Text>
-          <Text style={styles.resultSubtitle}>Choose who battles next — this switch is free.</Text>
+          <Text style={styles.resultTitle}>{t("battle.fainted", { name: activeMember.displayName })}</Text>
+          <Text style={styles.resultSubtitle}>{t("battle.forcedSwitch")}</Text>
           <View style={styles.forcedSwitchList}>
             {reserves.map((member) => (
               <Pressable
@@ -1070,11 +1113,9 @@ export function BattleScreen({ navigation, route }: Props) {
                 style={({ pressed }) => [styles.forcedSwitchRow, pressed && styles.moveButtonPressed]}
               >
                 <Text style={styles.sheetCreature}>
-                  {member.displayName} <Text style={styles.sheetLevel}>Lv. {member.level}</Text>
+                  {member.displayName} <Text style={styles.sheetLevel}>{t("common.level", { level: member.level })}</Text>
                 </Text>
-                <Text style={styles.sheetHp}>
-                  {member.currentHp} / {partyMemberStats(member).hp} HP
-                </Text>
+                <Text style={styles.sheetHp}>{t("common.hp", { hp: member.currentHp, max: partyMemberStats(member).hp })}</Text>
               </Pressable>
             ))}
           </View>
@@ -1086,12 +1127,27 @@ export function BattleScreen({ navigation, route }: Props) {
           damage line that caused it. */}
       {messageWaiting && (
         <BattleMessage
+          key={popups[0].id}
           lines={popups[0].lines}
           emphasis={popups[0].emphasis}
           remaining={popups.length - 1}
-          onAdvance={advancePopup}
+          autoAdvanceMs={autoAdvanceMs(popups[0].kind, { battlePace, textSpeed }, popups[0].lines.length)}
+          large={textSize === "large"}
+          onAdvance={() => advancePopup(popups[0].id)}
         />
       )}
+
+      {/* A move's full description, opened from its "i" button. Reading it costs nothing. */}
+      <Modal visible={inspecting !== null} transparent animationType="fade" onRequestClose={() => setInspecting(null)}>
+        <Pressable testID="move-info-backdrop" style={styles.sheetBackdrop} onPress={() => setInspecting(null)}>
+          <Pressable style={styles.infoSheet} onPress={(e) => e.stopPropagation()}>
+            {inspecting && (
+              <MoveDetailCard move={getMove(inspecting)} ppLeft={activeMember ? remainingPp(activeMember, inspecting) : undefined} />
+            )}
+            <PrimaryButton testID="move-info-close" label={t("common.close")} variant="secondary" onPress={() => setInspecting(null)} />
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Priority chain: an evolution reveal (if any) plays first, then the level-up stat
           comparison, then the battle result pop-up — each set together but shown one at a time,
@@ -1109,12 +1165,16 @@ export function BattleScreen({ navigation, route }: Props) {
           onReplace={(forgetMoveId) => {
             replacePartyMemberMove(movePrompts[0].uid, forgetMoveId, movePrompts[0].newMoveId);
             pushLog([
-              `${movePrompts[0].displayName} forgot ${getMove(forgetMoveId).name} and learned ${getMove(movePrompts[0].newMoveId).name}!`,
+              t("battle.forgotLearned", {
+                name: movePrompts[0].displayName,
+                old: c.move(forgetMoveId),
+                new: c.move(movePrompts[0].newMoveId),
+              }),
             ]);
             setMovePrompts((prev) => prev.slice(1));
           }}
           onSkip={() => {
-            pushLog([`${movePrompts[0].displayName} did not learn ${getMove(movePrompts[0].newMoveId).name}.`]);
+            pushLog([t("battle.didNotLearn", { name: movePrompts[0].displayName, move: c.move(movePrompts[0].newMoveId) })]);
             setMovePrompts((prev) => prev.slice(1));
           }}
         />
@@ -1123,8 +1183,8 @@ export function BattleScreen({ navigation, route }: Props) {
       {intro && trainer && (
         <ElementalTransition
           type={trainer.signatureType}
-          trainerName={`${trainer.title} ${trainer.name}`}
-          line={boast ?? "Let's see what you've got."}
+          trainerName={lines?.fullName ?? trainer.name}
+          line={lines?.boast ?? t("battle.defaultLine")}
           onDone={() => {
             setIntro(false);
             openTrainerBattle();
@@ -1142,7 +1202,7 @@ export function BattleScreen({ navigation, route }: Props) {
 
       {outcome === "enemy" && !messageWaiting && (
         <BlackoutOverlay
-          zoneName={getZoneName(currentZoneId)}
+          zoneName={c.stage(currentZoneId)}
           onContinue={() => {
             // Wake at the zone's chapel with the party restored — losing costs you your
             // place on the road, not your progress.
@@ -1161,27 +1221,31 @@ export function BattleScreen({ navigation, route }: Props) {
         <View style={styles.resultOverlay}>
           <Text style={styles.resultTitle}>
             {outcome === "player"
-              ? "Victory!"
+              ? t("result.victory")
               : outcome === "caught"
-              ? "Gotcha!"
-              : outcome === "fled"
-              ? "Got away safely!"
-              : "You blacked out..."}
+                ? t("result.gotcha")
+                : outcome === "fled"
+                  ? t("result.gotAway")
+                  : t("result.blackedOut")}
           </Text>
           <Text style={styles.resultSubtitle}>
-            {outcome === "player" && `${activeMember.displayName} defeated the wild ${enemy.displayName}.`}
-            {outcome === "caught" && `Wild ${enemy.displayName} joined your party.`}
-            {outcome === "fled" && `You fled from the wild ${enemy.displayName}.`}
-            {outcome === "enemy" && "Your whole party has fainted."}
+            {outcome === "player" &&
+              (trainer && lines
+                ? t("result.defeatedTrainer", { name: activeMember.displayName, trainer: lines.fullName })
+                : t("result.defeatedWild", { name: activeMember.displayName, foe: enemy.displayName }))}
+            {outcome === "caught" && t("result.joined", { name: enemy.displayName })}
+            {outcome === "fled" && t("result.fled", { name: enemy.displayName })}
+            {outcome === "enemy" && t("result.partyFainted")}
           </Text>
           {rewards && (
             <Text style={styles.rewardsText}>
-              +{rewards.money} gold{rewards.xp > 0 ? `, +${rewards.xp} XP` : ""}
-              {rewards.leveledUp ? ` — grew to level ${rewards.newLevel}!` : ""}
-              {rewards.kinnieDropped ? " — and a Kinnie dropped!" : ""}
+              {t("result.rewardsMoney", { money: rewards.money })}
+              {rewards.xp > 0 ? t("result.rewardsXp", { xp: rewards.xp }) : ""}
+              {rewards.leveledUp ? t("result.grewTo", { level: rewards.newLevel ?? 0 }) : ""}
+              {rewards.kinnieDropped ? t("result.kinnieDropped") : ""}
             </Text>
           )}
-          <PrimaryButton testID="return-to-home" label="Return to Home" onPress={() => navigation.popToTop()} />
+          <PrimaryButton testID="return-to-home" label={t("battle.returnHome")} onPress={() => navigation.popToTop()} />
         </View>
       </Modal>
     </View>
@@ -1189,6 +1253,38 @@ export function BattleScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
+  moveInfoButton: {
+    position: "absolute",
+    right: 6,
+    bottom: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: colors.textMuted,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surface,
+  },
+  moveInfoButtonPressed: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accentDeep,
+  },
+  moveInfoGlyph: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "800",
+    fontStyle: "italic",
+  },
+  infoSheet: {
+    width: "100%",
+    maxWidth: 440,
+    gap: 12,
+  },
+  logLineLarge: {
+    fontSize: 16,
+    lineHeight: 23,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

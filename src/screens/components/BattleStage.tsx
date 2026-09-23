@@ -8,6 +8,7 @@ import type { useCombatantAnimation } from "./useCombatantAnimation";
 import { BattleBackdrop, BattlePlatform } from "../../art/battleArt";
 import type { Biome } from "../../data/schemas";
 import { colors, typeColor, typeIcon } from "../theme";
+import { useI18n } from "../../i18n";
 
 const STAGE_HEIGHT = 220;
 const ENEMY_AVATAR_SIZE = 68;
@@ -66,6 +67,7 @@ interface Props {
  * layout and motion reading like a real battle, not a sprite upgrade.
  */
 export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleStage({ enemy, player, biome = "grass" }, ref) {
+  const { t } = useI18n();
   const [stageWidth, setStageWidth] = useState(FALLBACK_STAGE_WIDTH);
 
   const [projectileType, setProjectileType] = useState<TypeName>("Normal");
@@ -165,7 +167,7 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
       <View style={[styles.infoBox, styles.enemyInfoBox]}>
         <View style={styles.infoHeader}>
           <Text style={styles.infoName}>{enemy.name}</Text>
-          <Text style={styles.infoLevel}>Lv. {enemy.level}</Text>
+          <Text style={styles.infoLevel}>{t("common.level", { level: enemy.level })}</Text>
         </View>
         <View style={styles.badgeRow}>
           {enemy.types.map((t) => (
@@ -178,7 +180,7 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
       <View style={[styles.infoBox, styles.playerInfoBox, player.highlightCrux && styles.playerInfoBoxCrux]}>
         <View style={styles.infoHeader}>
           <Text style={styles.infoName}>{player.name}</Text>
-          <Text style={styles.infoLevel}>Lv. {player.level}</Text>
+          <Text style={styles.infoLevel}>{t("common.level", { level: player.level })}</Text>
         </View>
         <View style={styles.badgeRow}>
           {player.types.map((t) => (
@@ -186,7 +188,7 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
           ))}
         </View>
         <HpBar currentHp={player.hp} maxHp={player.maxHp} />
-        {player.highlightCrux && <Text style={styles.cruxActiveLabel}>Crux Aura active</Text>}
+        {player.highlightCrux && <Text style={styles.cruxActiveLabel}>{t("battle.cruxActive")}</Text>}
       </View>
 
       <Animated.View

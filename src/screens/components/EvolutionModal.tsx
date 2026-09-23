@@ -4,6 +4,7 @@ import type { EvolutionReveal } from "../../game/party";
 import { CreatureAvatar } from "./CreatureAvatar";
 import { TypeBadge } from "./TypeBadge";
 import { colors } from "../theme";
+import { useI18n } from "../../i18n";
 
 export type EvolutionRevealData = EvolutionReveal;
 
@@ -64,6 +65,7 @@ export function EvolutionModal({ data, onDismiss }: { data: EvolutionRevealData;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const { t } = useI18n();
   const currentSpeciesId = showNewForm ? data.newSpeciesId : data.oldSpeciesId;
   const currentTypes = showNewForm ? data.newTypes : data.oldTypes;
   const revealed = phase === "revealed";
@@ -81,19 +83,19 @@ export function EvolutionModal({ data, onDismiss }: { data: EvolutionRevealData;
 
           <Text style={styles.title}>
             {revealed
-              ? `${data.oldDisplayName} evolved into ${data.newDisplayName}!`
-              : `What? ${data.oldDisplayName} is evolving!`}
+              ? t("evolve.done", { old: data.oldDisplayName, new: data.newDisplayName })
+              : t("evolve.evolving", { name: data.oldDisplayName })}
           </Text>
 
           {revealed && (
             <View style={styles.badgeRow}>
-              {data.newTypes.map((t) => (
-                <TypeBadge key={t} type={t} />
+              {data.newTypes.map((type) => (
+                <TypeBadge key={type} type={type} />
               ))}
             </View>
           )}
 
-          {revealed && <Text style={styles.tapHint}>Tap anywhere to continue</Text>}
+          {revealed && <Text style={styles.tapHint}>{t("levelUp.tap")}</Text>}
         </View>
       </Pressable>
     </Modal>

@@ -11,6 +11,7 @@ import { PrimaryButton } from "./components/PrimaryButton";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { colors } from "./theme";
+import { useI18n } from "../i18n";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Party">;
 
@@ -19,15 +20,14 @@ export function PartyScreen({ navigation }: Props) {
   const releaseCreature = useGameStore((s) => s.releaseCreature);
   const setMainPartyMember = useGameStore((s) => s.setMainPartyMember);
   const [confirmUid, setConfirmUid] = useState<string | null>(null);
+  const { t } = useI18n();
 
   useKeyboardShortcuts({ m: () => navigation.popToTop() });
 
   return (
     <ScreenBackground style={styles.container}>
-      <Text style={styles.title}>Party</Text>
-      <Text style={styles.subtitle}>
-        {party.length} / 6 — drag-reorder and held items aren't wired up yet, but you can inspect each member.
-      </Text>
+      <Text style={styles.title}>{t("party.title")}</Text>
+      <Text style={styles.subtitle}>{t("party.subtitle", { count: party.length })}</Text>
 
       <ScrollView contentContainerStyle={styles.list}>
         {party.map((member, index) => {
@@ -46,14 +46,14 @@ export function PartyScreen({ navigation }: Props) {
                     <View style={styles.cardHeader}>
                       <Text style={styles.slotIndex}>#{index + 1}</Text>
                       <Text style={styles.name}>
-                        {member.displayName} <Text style={styles.level}>Lv. {member.level}</Text>
+                        {member.displayName} <Text style={styles.level}>{t("common.level", { level: member.level })}</Text>
                       </Text>
-                      {index === 0 && <Text style={styles.mainTag}>Main</Text>}
-                      {fainted && <Text style={styles.faintedTag}>Fainted</Text>}
+                      {index === 0 && <Text style={styles.mainTag}>{t("party.main")}</Text>}
+                      {fainted && <Text style={styles.faintedTag}>{t("common.fainted")}</Text>}
                     </View>
                     <View style={styles.badgeRow}>
-                      {member.types.map((t) => (
-                        <TypeBadge key={t} type={t} />
+                      {member.types.map((type) => (
+                        <TypeBadge key={type} type={type} />
                       ))}
                     </View>
                     <HpBar currentHp={member.currentHp} maxHp={partyMemberStats(member).hp} />
@@ -63,7 +63,7 @@ export function PartyScreen({ navigation }: Props) {
 
               {confirming ? (
                 <View style={styles.releaseConfirmRow}>
-                  <Text style={styles.releaseConfirmText}>Release {member.displayName} for good?</Text>
+                  <Text style={styles.releaseConfirmText}>{t("party.releaseConfirm", { name: member.displayName })}</Text>
                   <View style={styles.releaseConfirmButtons}>
                     <Pressable
                       testID={`confirm-release-${member.uid}`}
@@ -73,14 +73,14 @@ export function PartyScreen({ navigation }: Props) {
                       }}
                       style={styles.releaseConfirmBtn}
                     >
-                      <Text style={styles.releaseConfirmBtnText}>Yes, release</Text>
+                      <Text style={styles.releaseConfirmBtnText}>{t("common.yesRelease")}</Text>
                     </Pressable>
                     <Pressable
                       testID={`cancel-release-${member.uid}`}
                       onPress={() => setConfirmUid(null)}
                       style={styles.releaseCancelBtn}
                     >
-                      <Text style={styles.releaseCancelBtnText}>Cancel</Text>
+                      <Text style={styles.releaseCancelBtnText}>{t("common.cancel")}</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -92,7 +92,7 @@ export function PartyScreen({ navigation }: Props) {
                       onPress={() => setMainPartyMember(member.uid)}
                       style={styles.setMainButton}
                     >
-                      <Text style={styles.setMainButtonText}>Set as Main</Text>
+                      <Text style={styles.setMainButtonText}>{t("party.setMain")}</Text>
                     </Pressable>
                   )}
                   {party.length > 1 && (
@@ -101,7 +101,7 @@ export function PartyScreen({ navigation }: Props) {
                       onPress={() => setConfirmUid(member.uid)}
                       style={styles.releaseButton}
                     >
-                      <Text style={styles.releaseButtonText}>Release</Text>
+                      <Text style={styles.releaseButtonText}>{t("party.release")}</Text>
                     </Pressable>
                   )}
                 </View>
@@ -109,10 +109,10 @@ export function PartyScreen({ navigation }: Props) {
             </View>
           );
         })}
-        {party.length === 0 && <Text style={styles.empty}>No party members yet.</Text>}
+        {party.length === 0 && <Text style={styles.empty}>{t("party.empty")}</Text>}
       </ScrollView>
 
-      <PrimaryButton testID="back-button" label="Back" variant="secondary" onPress={() => navigation.goBack()} />
+      <PrimaryButton testID="back-button" label={t("common.back")} variant="secondary" onPress={() => navigation.goBack()} />
     </ScreenBackground>
   );
 }

@@ -7,6 +7,7 @@ import { STARTER_QUIZ_QUESTIONS, tallyStarterLine } from "../game/starterQuiz";
 import type { StarterLineName } from "../game/creatureFactory";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { colors } from "./theme";
+import { useI18n } from "../i18n";
 
 type Props = NativeStackScreenProps<RootStackParamList, "StarterQuiz">;
 
@@ -16,6 +17,7 @@ export function StarterQuizScreen({ navigation }: Props) {
   const [answers, setAnswers] = useState<StarterLineName[]>([]);
 
   const question = STARTER_QUIZ_QUESTIONS[step];
+  const { t, c } = useI18n();
 
   function handleAnswer(line: StarterLineName) {
     const nextAnswers = [...answers, line];
@@ -32,19 +34,19 @@ export function StarterQuizScreen({ navigation }: Props) {
   return (
     <ScreenBackground style={styles.container}>
       <Text style={styles.eyebrow}>
-        Question {step + 1} of {STARTER_QUIZ_QUESTIONS.length}
+        {t("quiz.progress", { step: step + 1, total: STARTER_QUIZ_QUESTIONS.length })}
       </Text>
-      <Text style={styles.prompt}>{question.prompt}</Text>
+      <Text style={styles.prompt}>{c.quizPrompt(question.id)}</Text>
 
       <View style={styles.options}>
-        {question.options.map((option) => (
+        {question.options.map((option, index) => (
           <Pressable
             key={option.label}
             testID={`quiz-option-${step}-${option.line}`}
             onPress={() => handleAnswer(option.line)}
             style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
           >
-            <Text style={styles.optionText}>{option.label}</Text>
+            <Text style={styles.optionText}>{c.quizOption(question.id, index)}</Text>
           </Pressable>
         ))}
       </View>

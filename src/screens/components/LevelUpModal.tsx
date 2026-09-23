@@ -3,6 +3,7 @@ import type { StatBlock, TypeName } from "../../data/schemas";
 import { CreatureAvatar } from "./CreatureAvatar";
 import { TypeBadge } from "./TypeBadge";
 import { colors } from "../theme";
+import { useI18n } from "../../i18n";
 
 export interface LevelUpRevealData {
   speciesId: string;
@@ -14,14 +15,7 @@ export interface LevelUpRevealData {
   newStats: StatBlock;
 }
 
-const STAT_LABELS: { key: keyof StatBlock; label: string }[] = [
-  { key: "hp", label: "HP" },
-  { key: "atk", label: "Attack" },
-  { key: "def", label: "Defense" },
-  { key: "spatk", label: "Sp. Attack" },
-  { key: "spdef", label: "Sp. Defense" },
-  { key: "speed", label: "Speed" },
-];
+const STAT_KEYS: (keyof StatBlock)[] = ["hp", "atk", "def", "spatk", "spdef", "speed"];
 
 /**
  * Full-screen "creature grew a level" reveal: old stats -> new stats, one row
@@ -29,34 +23,36 @@ const STAT_LABELS: { key: keyof StatBlock; label: string }[] = [
  * dismiss, matching the mainline games' level-up screen convention.
  */
 export function LevelUpModal({ data, onDismiss }: { data: LevelUpRevealData; onDismiss: () => void }) {
+  const { t, c } = useI18n();
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onDismiss}>
       <Pressable testID="level-up-modal" style={styles.backdrop} onPress={onDismiss}>
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
           <CreatureAvatar speciesId={data.speciesId} types={data.types} size={72} />
-          <Text style={styles.title}>{data.displayName} grew to Lv. {data.newLevel}!</Text>
+          <Text style={styles.title}>{t("levelUp.title", { name: data.displayName, level: data.newLevel })}</Text>
           <View style={styles.badgeRow}>
-            {data.types.map((t) => (
-              <TypeBadge key={t} type={t} />
+            {data.types.map((type) => (
+              <TypeBadge key={type} type={type} />
             ))}
           </View>
           <Text style={styles.levelLine}>
-            Lv. {data.oldLevel} <Text style={styles.arrow}>→</Text> Lv. {data.newLevel}
+            {t("common.level", { level: data.oldLevel })} <Text style={styles.arrow}>→</Text>{" "}
+            {t("common.level", { level: data.newLevel })}
           </Text>
 
           <View style={styles.statTable}>
             <View style={styles.statHeaderRow}>
-              <Text style={[styles.statLabel, styles.statHeaderText]}>Stat</Text>
-              <Text style={[styles.statValue, styles.statHeaderText]}>Before</Text>
-              <Text style={[styles.statValue, styles.statHeaderText]}>After</Text>
+              <Text style={[styles.statLabel, styles.statHeaderText]}>{t("levelUp.stat")}</Text>
+              <Text style={[styles.statValue, styles.statHeaderText]}>{t("levelUp.before")}</Text>
+              <Text style={[styles.statValue, styles.statHeaderText]}>{t("levelUp.after")}</Text>
               <Text style={[styles.statDelta, styles.statHeaderText]}>+</Text>
             </View>
-            {STAT_LABELS.map(({ key, label }) => {
+            {STAT_KEYS.map((key) => {
               const before = data.oldStats[key];
               const after = data.newStats[key];
               return (
                 <View key={key} style={styles.statRow}>
-                  <Text style={styles.statLabel}>{label}</Text>
+                  <Text style={styles.statLabel}>{c.stat(key)}</Text>
                   <Text style={styles.statValue}>{before}</Text>
                   <Text style={styles.statValue}>{after}</Text>
                   <Text style={styles.statDelta}>{after > before ? `+${after - before}` : "—"}</Text>
@@ -73,7 +69,8 @@ export function LevelUpModal({ data, onDismiss }: { data: LevelUpRevealData; onD
 }
 
 function PressableTapHint() {
-  return <Text style={styles.tapHint}>Tap anywhere to continue</Text>;
+  const { t } = useI18n();
+  return <Text style={styles.tapHint}>{t("levelUp.tap")}</Text>;
 }
 
 const styles = StyleSheet.create({

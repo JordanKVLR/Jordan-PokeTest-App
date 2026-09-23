@@ -20,5 +20,6 @@ export type RootStackParamList = {
   Bag: undefined;
   Shop: undefined;
   Help: undefined;
+  Settings: undefined;
   CreatureDetail: CreatureDetailParams;
 };

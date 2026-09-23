@@ -3,6 +3,9 @@ import { Animated, Dimensions, Easing, Pressable, StyleSheet, Text } from "react
 import Svg, { Circle, Path, Polygon, Rect } from "react-native-svg";
 import type { TypeName } from "../../data/schemas";
 import { TYPE_COLORS, shade } from "../theme";
+import { useI18n } from "../../i18n";
+import { useSettings, currentSettings } from "../../state/settingsStore";
+import { trainerIntroHoldMs } from "../../game/settings";
 
 /**
  * The wipe that plays into a trainer battle, themed to the type that trainer fights under.
@@ -71,15 +74,28 @@ export function ElementalTransition({
   const seed = useMemo(() => [...trainerName].reduce((h, c) => h + c.charCodeAt(0), 7), [trainerName]);
 
   const [ready, setReady] = useState(false);
+  const { t } = useI18n();
+  const reducedMotion = useSettings((s) => s.reducedMotion);
+  const doneRef = useRef(false);
+  const finish = () => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onDone();
+  };
 
   useEffect(() => {
+    // With reduced motion the particle field fades straight in rather than sweeping across.
+    const wipe = reducedMotion ? 200 : DURATION;
     Animated.sequence([
-      Animated.timing(progress, { toValue: 1, duration: DURATION, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+      Animated.timing(progress, { toValue: 1, duration: wipe, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
       Animated.timing(textFade, { toValue: 1, duration: 320, useNativeDriver: false }),
     ]).start(({ finished }) => {
-      // The wipe no longer times itself out. Once the trainer's line is legible it stays there
-      // until the player taps it away — the same rule the rest of the battle now follows.
-      if (finished) setReady(true);
+      if (!finished) return;
+      setReady(true);
+      // On Quick pace the trainer's line holds for a moment and then gets out of the way;
+      // otherwise it waits for a tap, like every other battle message.
+      const hold = trainerIntroHoldMs(currentSettings());
+      if (hold !== null) setTimeout(finish, hold);
     });
     // onDone is a fresh closure each render; re-running the sequence would restart the wipe.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -93,9 +109,9 @@ export function ElementalTransition({
     <Pressable
       testID={`elemental-transition-${type}`}
       accessibilityRole="button"
-      accessibilityLabel={`${trainerName}. ${line}. Tap to begin the battle.`}
+      accessibilityLabel={`${trainerName}. ${line}. ${t("battle.tapToBegin")}.`}
       onPress={() => {
-        if (ready) onDone();
+        if (ready) finish();
       }}
       style={StyleSheet.absoluteFill}
     >
@@ -122,7 +138,7 @@ export function ElementalTransition({
         <Text style={styles.line}>“{line}”</Text>
         {ready && (
           <Text testID="transition-continue" style={styles.tap}>
-            Tap to begin
+            {t("battle.tapToBegin")}
           </Text>
         )}
       </Animated.View>

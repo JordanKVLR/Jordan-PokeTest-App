@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Animated, Modal, Pressable, StyleSheet, Text } from "react-native";
+import { useI18n } from "../../i18n";
 
 /**
  * The classic whiteout, in black: when the last creature goes down, the screen fades out
@@ -14,6 +15,7 @@ export function BlackoutOverlay({
   zoneName: string;
   onContinue: () => void;
 }) {
+  const { t } = useI18n();
   const fade = useRef(new Animated.Value(0)).current;
   const textFade = useRef(new Animated.Value(0)).current;
 
@@ -28,16 +30,14 @@ export function BlackoutOverlay({
     <Modal visible transparent animationType="none" onRequestClose={() => {}}>
       <Animated.View testID="blackout-overlay" style={[styles.backdrop, { opacity: fade }]}>
         <Animated.View style={{ opacity: textFade, alignItems: "center" }}>
-          <Text style={styles.title}>Everything went dark…</Text>
-          <Text style={styles.body}>
-            Your last creature fell. A passer-by carried you back to the chapel at {zoneName}.
-          </Text>
+          <Text style={styles.title}>{t("blackout.title")}</Text>
+          <Text style={styles.body}>{t("blackout.body", { zone: zoneName })}</Text>
           <Pressable
             testID="blackout-continue"
             onPress={onContinue}
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
           >
-            <Text style={styles.buttonText}>Wake up</Text>
+            <Text style={styles.buttonText}>{t("blackout.wake")}</Text>
           </Pressable>
         </Animated.View>
       </Animated.View>

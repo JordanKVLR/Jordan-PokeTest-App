@@ -4,6 +4,7 @@ import type { RootStackParamList } from "../navigation/types";
 import { PrimaryButton } from "./components/PrimaryButton";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { colors } from "./theme";
+import { useI18n } from "../i18n";
 
 type Props = NativeStackScreenProps<RootStackParamList, "RegionSelect">;
 
@@ -15,18 +16,16 @@ type Props = NativeStackScreenProps<RootStackParamList, "RegionSelect">;
  * future second region would slot in.
  */
 export function RegionSelectScreen({ navigation }: Props) {
+  const { t } = useI18n();
   return (
     <ScreenBackground style={styles.container}>
-      <Text style={styles.eyebrow}>Region</Text>
+      <Text style={styles.eyebrow}>{t("region.eyebrow")}</Text>
       <View style={styles.card}>
-        <Text style={styles.regionName}>Melita</Text>
-        <Text style={styles.regionBlurb}>
-          An archipelago of three islands — Mainland Melita, Gaudos, and Ephrastia — caught between
-          the fortress-tech of the Knights' Chivalry and the megalithic folklore of Antiquity.
-        </Text>
+        <Text style={styles.regionName}>{t("region.name")}</Text>
+        <Text style={styles.regionBlurb}>{t("region.blurb")}</Text>
       </View>
 
-      <PrimaryButton label="Begin Journey" onPress={() => navigation.navigate("StarterQuiz")} />
+      <PrimaryButton label={t("region.begin")} onPress={() => navigation.navigate("StarterQuiz")} />
     </ScreenBackground>
   );
 }

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import type { BriefingPage } from "../../game/briefings";
 import { colors } from "../theme";
+import { useI18n } from "../../i18n";
+import { useSettings } from "../../state/settingsStore";
 
 /**
  * A stack of briefing pages, one at a time, each tapped away — the same rule the battle
@@ -9,6 +11,8 @@ import { colors } from "../theme";
  * knows which tap hands control back to them.
  */
 export function BriefingModal({ pages, onDone }: { pages: BriefingPage[]; onDone: () => void }) {
+  const { t } = useI18n();
+  const large = useSettings((s) => s.textSize) === "large";
   const [index, setIndex] = useState(0);
   const enter = useRef(new Animated.Value(0)).current;
   const page = pages[index];
@@ -39,7 +43,7 @@ export function BriefingModal({ pages, onDone }: { pages: BriefingPage[]; onDone
           <Text style={styles.title}>{page.title}</Text>
           <View style={styles.body}>
             {page.lines.map((line) => (
-              <Text key={line} style={styles.line}>
+              <Text key={line} style={[styles.line, large && styles.lineLarge]}>
                 {line}
               </Text>
             ))}
@@ -55,7 +59,7 @@ export function BriefingModal({ pages, onDone }: { pages: BriefingPage[]; onDone
               onPress={advance}
               style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
             >
-              <Text style={styles.buttonText}>{last ? "Let's go" : "Next"}</Text>
+              <Text style={styles.buttonText}>{last ? t("common.letsGo") : t("common.next")}</Text>
             </Pressable>
           </View>
         </Animated.View>
@@ -97,6 +101,10 @@ const styles = StyleSheet.create({
   body: {
     marginTop: 12,
     gap: 10,
+  },
+  lineLarge: {
+    fontSize: 18,
+    lineHeight: 26,
   },
   line: {
     color: colors.text,

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Animated, Easing, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors } from "../theme";
+import { useI18n } from "../../i18n";
 
 /**
  * The end of the run. Shown once — the moment the last trainer on the islands goes down and
@@ -19,6 +20,7 @@ export function VictoryOverlay({
   medalsWon: number;
   onContinue: () => void;
 }) {
+  const { t } = useI18n();
   const rise = useRef(new Animated.Value(0)).current;
   const textFade = useRef(new Animated.Value(0)).current;
 
@@ -36,17 +38,14 @@ export function VictoryOverlay({
       <View testID="victory-overlay" style={styles.backdrop}>
         <Animated.Text style={[styles.star, { transform: [{ scale: starScale }] }]}>★</Animated.Text>
         <Animated.View style={{ opacity: textFade, alignItems: "center" }}>
-          <Text style={styles.title}>The islands are yours</Text>
-          <Text style={styles.body}>
-            {trainersBeaten} trainers beaten and all {medalsWon} medals won. There is no one left
-            on Melita who has not faced you.
-          </Text>
+          <Text style={styles.title}>{t("victory.title")}</Text>
+          <Text style={styles.body}>{t("victory.body", { trainers: trainersBeaten, medals: medalsWon })}</Text>
           <Pressable
             testID="victory-continue"
             onPress={onContinue}
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
           >
-            <Text style={styles.buttonText}>Keep playing</Text>
+            <Text style={styles.buttonText}>{t("victory.keepPlaying")}</Text>
           </Pressable>
         </Animated.View>
       </View>

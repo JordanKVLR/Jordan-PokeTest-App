@@ -4,7 +4,6 @@ import type { RootStackParamList } from "../navigation/types";
 import { useGameStore } from "../state/gameStore";
 import { ALL_MEDALS } from "../game/zoneProgression";
 import { partyMemberStats } from "../game/party";
-import { getZoneName } from "../game/zones";
 import { HpBar } from "./components/HpBar";
 import { PrimaryButton } from "./components/PrimaryButton";
 import { TypeBadge } from "./components/TypeBadge";
@@ -13,6 +12,7 @@ import { HoverTip } from "./components/HoverTip";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { colors } from "./theme";
 import { completionProgress } from "../game/trainers";
+import { useI18n } from "../i18n";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
@@ -28,7 +28,8 @@ export function HomeScreen({ navigation }: Props) {
   const currency = useGameStore((s) => s.currency);
 
   const leadMember = party[0];
-  const zoneName = getZoneName(currentZoneId);
+  const { t, c } = useI18n();
+  const zoneName = c.stage(currentZoneId);
 
   useKeyboardShortcuts({
     b: () => navigation.navigate("Bag"),
@@ -41,26 +42,26 @@ export function HomeScreen({ navigation }: Props) {
       <View style={styles.hud}>
         <View style={styles.hudTopRow}>
           <Text style={styles.zoneLabel}>{zoneName}</Text>
-          <Text style={styles.currency}>{currency} 🪙</Text>
+          <Text style={styles.currency}>{t("common.gold", { amount: currency })}</Text>
         </View>
         {leadMember && (
           <View style={styles.partyCard}>
             <Text style={styles.partyName}>
-              {leadMember.displayName} <Text style={styles.partyLevel}>Lv. {leadMember.level}</Text>
+              {leadMember.displayName} <Text style={styles.partyLevel}>{t("common.level", { level: leadMember.level })}</Text>
             </Text>
             <View style={styles.badgeRow}>
-              {leadMember.types.map((t) => (
-                <TypeBadge key={t} type={t} />
+              {leadMember.types.map((type) => (
+                <TypeBadge key={type} type={type} />
               ))}
             </View>
             <HpBar currentHp={leadMember.currentHp} maxHp={partyMemberStats(leadMember).hp} />
           </View>
         )}
-        <Text style={styles.stat}>Battles won: {battlesWon}</Text>
+        <Text style={styles.stat}>{t("home.battlesWon", { count: battlesWon })}</Text>
         <Text style={styles.stat} testID="completion-progress">
           {progress.complete
-            ? "Every trainer and boss beaten — the islands are yours."
-            : `Trainers beaten: ${progress.trainersDefeated} of ${progress.trainersTotal}`}
+            ? t("home.complete")
+            : t("home.trainersBeaten", { done: progress.trainersDefeated, total: progress.trainersTotal })}
         </Text>
 
         {/* Medal track: four gyms across the run, shown filled as they are won. */}
@@ -75,7 +76,7 @@ export function HomeScreen({ navigation }: Props) {
               >
                 <Text style={[styles.medalGlyph, earned && styles.medalGlyphEarned]}>{earned ? "★" : "☆"}</Text>
                 <Text style={[styles.medalLabel, earned && styles.medalLabelEarned]} numberOfLines={1}>
-                  {medal.medalName.replace(" Medal", "")}
+                  {c.medal(medal.medalId).replace(" Medal", "").replace("Midalja ", "")}
                 </Text>
               </View>
             );
@@ -84,47 +85,55 @@ export function HomeScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.actions}>
-        <HoverTip text="Return to the map and keep exploring. Keyboard: M does this from anywhere.">
-          <PrimaryButton testID="nav-explore" label={`Explore ${zoneName}`} onPress={() => navigation.popToTop()} />
+        <HoverTip text={t("home.tip.explore")}>
+          <PrimaryButton testID="nav-explore" label={t("home.explore", { zone: zoneName })} onPress={() => navigation.popToTop()} />
         </HoverTip>
-        <HoverTip text="Manage your party: check stats, use items, switch order, or release a creature. Keyboard: P.">
+        <HoverTip text={t("home.tip.party")}>
           <PrimaryButton
             testID="nav-party"
-            label="Party"
+            label={t("home.party")}
             variant="secondary"
             onPress={() => navigation.navigate("Party")}
           />
         </HoverTip>
-        <HoverTip text="Browse every species you've seen or caught so far.">
+        <HoverTip text={t("home.tip.codex")}>
           <PrimaryButton
             testID="nav-codex"
-            label="Codex"
+            label={t("home.codex")}
             variant="secondary"
             onPress={() => navigation.navigate("Codex")}
           />
         </HoverTip>
-        <HoverTip text="Check your balls, medicine, and key items. Keyboard: B.">
+        <HoverTip text={t("home.tip.bag")}>
           <PrimaryButton
             testID="nav-bag"
-            label="Bag"
+            label={t("home.bag")}
             variant="secondary"
             onPress={() => navigation.navigate("Bag")}
           />
         </HoverTip>
-        <HoverTip text="Spend gold on balls and medicine — earned by catching or defeating wild creatures.">
+        <HoverTip text={t("home.tip.shop")}>
           <PrimaryButton
             testID="nav-shop"
-            label="Shop"
+            label={t("home.shop")}
             variant="secondary"
             onPress={() => navigation.navigate("Shop")}
           />
         </HoverTip>
-        <HoverTip text="Explains the goal, battling, catching, and what Crux Aura is.">
+        <HoverTip text={t("home.tip.help")}>
           <PrimaryButton
             testID="nav-help"
-            label="Help"
+            label={t("home.help")}
             variant="secondary"
             onPress={() => navigation.navigate("Help")}
+          />
+        </HoverTip>
+        <HoverTip text={t("home.tip.settings")}>
+          <PrimaryButton
+            testID="nav-settings"
+            label={t("home.settings")}
+            variant="secondary"
+            onPress={() => navigation.navigate("Settings")}
           />
         </HoverTip>
       </View>

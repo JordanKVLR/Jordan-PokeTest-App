@@ -8,6 +8,7 @@ import { ScreenBackground } from "./components/ScreenBackground";
 import { HoverTip } from "./components/HoverTip";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { colors } from "./theme";
+import { useI18n } from "../i18n";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Shop">;
 
@@ -18,6 +19,7 @@ export function ShopScreen({ navigation }: Props) {
   const inventory = useGameStore((s) => s.inventory);
   const spendCurrency = useGameStore((s) => s.spendCurrency);
   const addItem = useGameStore((s) => s.addItem);
+  const { t, c } = useI18n();
 
   useKeyboardShortcuts({ m: () => navigation.popToTop() });
 
@@ -29,10 +31,10 @@ export function ShopScreen({ navigation }: Props) {
   return (
     <ScreenBackground style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Shop</Text>
-        <Text style={styles.currency}>{currency} 🪙</Text>
+        <Text style={styles.title}>{t("shop.title")}</Text>
+        <Text style={styles.currency}>{t("common.gold", { amount: currency })}</Text>
       </View>
-      <Text style={styles.subtitle}>Earn gold by catching or defeating wild creatures.</Text>
+      <Text style={styles.subtitle}>{t("shop.subtitle")}</Text>
 
       <ScrollView contentContainerStyle={styles.list}>
         {items.map((item) => {
@@ -41,13 +43,13 @@ export function ShopScreen({ navigation }: Props) {
           return (
             <View key={item.id} style={styles.card}>
               <View style={styles.cardHeader}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemQty}>owned: {owned}</Text>
+                <Text style={styles.itemName}>{c.item(item.id)}</Text>
+                <Text style={styles.itemQty}>{t("shop.owned", { count: owned })}</Text>
               </View>
-              <Text style={styles.itemDescription}>{item.description}</Text>
+              <Text style={styles.itemDescription}>{c.itemDescription(item.id)}</Text>
               <View style={styles.buyRow}>
-                <Text style={styles.price}>{item.price} 🪙</Text>
-                <HoverTip text={item.description}>
+                <Text style={styles.price}>{t("common.gold", { amount: item.price ?? 0 })}</Text>
+                <HoverTip text={c.itemDescription(item.id)}>
                   <Pressable
                     testID={`buy-${item.id}`}
                     disabled={!canAfford}
@@ -58,7 +60,7 @@ export function ShopScreen({ navigation }: Props) {
                       pressed && canAfford && styles.buyButtonPressed,
                     ]}
                   >
-                    <Text style={styles.buyButtonText}>Buy</Text>
+                    <Text style={styles.buyButtonText}>{t("shop.buy")}</Text>
                   </Pressable>
                 </HoverTip>
               </View>
@@ -67,7 +69,7 @@ export function ShopScreen({ navigation }: Props) {
         })}
       </ScrollView>
 
-      <PrimaryButton testID="back-button" label="Back" variant="secondary" onPress={() => navigation.goBack()} />
+      <PrimaryButton testID="back-button" label={t("common.back")} variant="secondary" onPress={() => navigation.goBack()} />
     </ScreenBackground>
   );
 }

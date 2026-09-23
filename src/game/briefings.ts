@@ -1,5 +1,6 @@
 import { STAGES, getStage } from "./zoneProgression";
 import { allTrainers, trainersForZone } from "./trainers";
+import type { I18n, StringKey } from "../i18n/core";
 
 /**
  * What the player is told, and when.
@@ -18,74 +19,83 @@ export interface BriefingPage {
   lines: string[];
 }
 
-const TERRAIN: Record<string, string> = {
-  grass: "tall grass",
-  rock: "broken rock",
-  water: "shallows",
-  sand: "open sand",
-};
-
-export function missionBriefing(): BriefingPage {
+export function missionBriefing(i18n: I18n): BriefingPage {
+  const { t, c } = i18n;
   const trainers = allTrainers();
-  const gyms = trainers.filter((t) => t.isGymLeader);
+  const gyms = trainers.filter((trainer) => trainer.isGymLeader);
   const finalStage = STAGES[STAGES.length - 1];
   return {
     id: "mission",
-    kicker: "Your mission",
-    title: "Beat everyone on Melita",
+    kicker: t("brief.mission.kicker"),
+    title: t("brief.mission.title"),
     lines: [
-      `${STAGES.length} stages lie between here and ${finalStage.name}. ${trainers.length} trainers are waiting along the way — ${gyms.length} of them gym leaders.`,
-      `Win the game by beating every one of them. Each gym leader carries a medal, and each medal opens the next five stages.`,
-      "Catch wild creatures in the tall grass, rock, shallows and sand to grow your party. When it is hurt, rest at a chapel.",
+      t("brief.mission.line1", {
+        stages: STAGES.length,
+        final: c.stage(finalStage.id),
+        trainers: trainers.length,
+        gyms: gyms.length,
+      }),
+      t("brief.mission.line2"),
+      t("brief.mission.line3"),
     ],
   };
 }
 
-export function stageBriefing(zoneId: string): BriefingPage | null {
+export function stageBriefing(zoneId: string, i18n: I18n): BriefingPage | null {
+  const { t, c } = i18n;
   const stage = getStage(zoneId);
   if (!stage) return null;
 
   const trainers = trainersForZone(zoneId);
-  const regulars = trainers.filter((t) => !t.isGymLeader);
-  const leader = trainers.find((t) => t.isGymLeader);
+  const regulars = trainers.filter((trainer) => !trainer.isGymLeader);
+  const leader = trainers.find((trainer) => trainer.isGymLeader);
   const [a, b] = stage.biomes;
   const lines: string[] = [
-    `Wild creatures here live in the ${TERRAIN[a] ?? a} and the ${TERRAIN[b] ?? b}.`,
+    t("brief.stage.terrain", { a: t(`terrain.${a}` as StringKey), b: t(`terrain.${b}` as StringKey) }),
     regulars.length === 1
-      ? "One trainer waits beside the road. Beat them — every trainer counts towards the win."
-      : `${regulars.length} trainers wait beside the road. Beat them all — every trainer counts towards the win.`,
+      ? t("brief.stage.trainersOne")
+      : t("brief.stage.trainersMany", { count: regulars.length }),
   ];
 
   if (leader && stage.gym) {
-    const nextBlock = stage.stage < STAGES.length ? ` Without it, stage ${stage.stage + 1} stays shut.` : "";
-    lines.push(
-      `${leader.name}, ${leader.title}, stands at the far end holding the ${stage.gym.medalName}.${nextBlock}`
-    );
+    const holds = t("brief.stage.gym", {
+      leader: leader.name,
+      title: c.gymTitle(stage.gym.medalId),
+      medal: c.medal(stage.gym.medalId),
+    });
+    const gate = stage.stage < STAGES.length ? ` ${t("brief.stage.gymGate", { next: stage.stage + 1 })}` : "";
+    lines.push(holds + gate);
   }
 
-  if (stage.stage === STAGES.length) {
-    lines.push("This is the last stage. Clear it and there is no one left on the islands to face.");
-  } else {
-    lines.push("The road runs straight to the exit; the chapel near the entrance heals your party.");
-  }
+  lines.push(stage.stage === STAGES.length ? t("brief.stage.final") : t("brief.stage.road"));
 
+  const kickerParams = { stage: stage.stage, total: STAGES.length };
   return {
     id: `stage:${zoneId}`,
-    kicker: `Stage ${stage.stage} of ${STAGES.length}${stage.gym ? " · Gym" : ""}`,
-    title: stage.name,
+    kicker: stage.gym ? t("brief.stage.kickerGym", kickerParams) : t("brief.stage.kicker", kickerParams),
+    title: c.stage(zoneId),
     lines,
   };
 }
 
 /**
  * The pages to show on arriving in a zone. Nothing, if the player has been here before. On a
- * brand-new game — nowhere visited yet — the mission comes first, then the first stage.
+ * brand-new game — nowhere visited yet — the mission comes first, then the first stage. With
+ * stage briefings turned off in Settings, the mission still plays once: it is the goal of the
+ * game, not a per-stage summary.
  */
-export function briefingsOnEntry(zoneId: string, visitedStageIds: readonly string[]): BriefingPage[] {
+export function briefingsOnEntry(
+  zoneId: string,
+  visitedStageIds: readonly string[],
+  i18n: I18n,
+  options: { stageBriefings?: boolean } = {}
+): BriefingPage[] {
   if (visitedStageIds.includes(zoneId)) return [];
   const pages: BriefingPage[] = [];
-  if (visitedStageIds.length === 0) pages.push(missionBriefing());
-  const stage = stageBriefing(zoneId);
-  if (stage) pages.push(stage);
+  if (visitedStageIds.length === 0) pages.push(missionBriefing(i18n));
+  if (options.stageBriefings !== false) {
+    const stage = stageBriefing(zoneId, i18n);
+    if (stage) pages.push(stage);
+  }
   return pages;
 }

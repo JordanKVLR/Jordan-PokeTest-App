@@ -14,6 +14,7 @@ import { CodexScreen } from "../screens/CodexScreen";
 import { BagScreen } from "../screens/BagScreen";
 import { ShopScreen } from "../screens/ShopScreen";
 import { HelpScreen } from "../screens/HelpScreen";
+import { SettingsScreen } from "../screens/SettingsScreen";
 import { CreatureDetailScreen } from "../screens/CreatureDetailScreen";
 import { colors } from "../screens/theme";
 
@@ -36,6 +37,7 @@ export function RootNavigator() {
         <Stack.Screen name="Bag" component={BagScreen} />
         <Stack.Screen name="Shop" component={ShopScreen} />
         <Stack.Screen name="Help" component={HelpScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="CreatureDetail" component={CreatureDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>

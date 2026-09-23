@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, View } from "react-native";
 import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import { world } from "../screens/theme";
+import { useSettings } from "../state/settingsStore";
 
 /**
  * The title screen's backdrop: the Dingli cliffs at the western end of the island, looking out
@@ -24,7 +25,13 @@ const AnimatedG = Animated.createAnimatedComponent(G);
 /** A value that eases back and forth forever — used for every drift on this screen. */
 function useDrift(duration: number, delay = 0) {
   const value = useRef(new Animated.Value(0)).current;
+  const still = useSettings((s) => s.reducedMotion);
   useEffect(() => {
+    // Reduced motion: the scene is drawn, not animated. Hold everything mid-drift.
+    if (still) {
+      value.setValue(0.5);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(value, { toValue: 1, duration, delay, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
@@ -33,20 +40,26 @@ function useDrift(duration: number, delay = 0) {
     );
     loop.start();
     return () => loop.stop();
-  }, [value, duration, delay]);
+  }, [value, duration, delay, still]);
   return value;
 }
 
 /** A value that runs 0 -> 1 and snaps back, for things that cross the screen one way. */
 function useSweep(duration: number, delay = 0) {
   const value = useRef(new Animated.Value(0)).current;
+  const still = useSettings((s) => s.reducedMotion);
   useEffect(() => {
+    if (still) {
+      // Parked with the cloud banks and gulls in view rather than off the edge.
+      value.setValue(0.55);
+      return;
+    }
     const loop = Animated.loop(
       Animated.timing(value, { toValue: 1, duration, delay, easing: Easing.linear, useNativeDriver: false })
     );
     loop.start();
     return () => loop.stop();
-  }, [value, duration, delay]);
+  }, [value, duration, delay, still]);
   return value;
 }
 

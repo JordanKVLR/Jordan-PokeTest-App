@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { useGameStore } from "../state/gameStore";
-import { DEX_ENTRIES, ERA_LABELS, ERA_ORDER } from "../game/speciesCatalog";
+import { DEX_ENTRIES, ERA_ORDER } from "../game/speciesCatalog";
 import type { Era, TypeName } from "../data/schemas";
 import { TypeBadge } from "./components/TypeBadge";
 import { CreatureAvatar } from "./components/CreatureAvatar";
@@ -11,6 +11,7 @@ import { PrimaryButton } from "./components/PrimaryButton";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { colors, typeColor } from "./theme";
+import { useI18n } from "../i18n";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Codex">;
 
@@ -21,6 +22,7 @@ export function CodexScreen({ navigation }: Props) {
   const caughtSpeciesIds = useGameStore((s) => s.caughtSpeciesIds);
   const [typeFilter, setTypeFilter] = useState<TypeName | null>(null);
   const [eraFilter, setEraFilter] = useState<Era | null>(null);
+  const { t, c } = useI18n();
 
   useKeyboardShortcuts({ m: () => navigation.popToTop() });
 
@@ -39,9 +41,9 @@ export function CodexScreen({ navigation }: Props) {
 
   return (
     <ScreenBackground style={styles.container}>
-      <Text style={styles.title}>Codex</Text>
+      <Text style={styles.title}>{t("codex.title")}</Text>
       <Text style={styles.subtitle}>
-        {seenCount} / {DEX_ENTRIES.length} seen · {caughtSpeciesIds.length} / {DEX_ENTRIES.length} caught
+        {t("codex.progress", { seen: seenCount, caught: caughtSpeciesIds.length, total: DEX_ENTRIES.length })}
       </Text>
 
       <ScrollView
@@ -54,7 +56,7 @@ export function CodexScreen({ navigation }: Props) {
           onPress={() => setEraFilter(null)}
           style={[styles.filterChip, eraFilter === null && styles.filterChipActive]}
         >
-          <Text style={styles.filterChipText}>All eras</Text>
+          <Text style={styles.filterChipText}>{t("codex.allEras")}</Text>
         </Pressable>
         {eras.map((era) => (
           <Pressable
@@ -63,7 +65,7 @@ export function CodexScreen({ navigation }: Props) {
             onPress={() => setEraFilter(era)}
             style={[styles.filterChip, eraFilter === era && styles.filterChipActive]}
           >
-            <Text style={styles.filterChipText}>{ERA_LABELS[era].split(" · ")[0]}</Text>
+            <Text style={styles.filterChipText}>{c.era(era).split(" · ")[0]}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -77,19 +79,19 @@ export function CodexScreen({ navigation }: Props) {
           onPress={() => setTypeFilter(null)}
           style={[styles.filterChip, typeFilter === null && styles.filterChipActive]}
         >
-          <Text style={styles.filterChipText}>All</Text>
+          <Text style={styles.filterChipText}>{t("codex.allTypes")}</Text>
         </Pressable>
-        {ALL_TYPES.map((t) => (
+        {ALL_TYPES.map((type) => (
           <Pressable
-            key={t}
-            onPress={() => setTypeFilter(t)}
+            key={type}
+            onPress={() => setTypeFilter(type)}
             style={[
               styles.filterChip,
-              { borderColor: typeColor(t) },
-              typeFilter === t && { backgroundColor: typeColor(t) },
+              { borderColor: typeColor(type) },
+              typeFilter === type && { backgroundColor: typeColor(type) },
             ]}
           >
-            <Text style={styles.filterChipText}>{t}</Text>
+            <Text style={styles.filterChipText}>{c.type(type)}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -118,24 +120,24 @@ export function CodexScreen({ navigation }: Props) {
               <Text style={styles.cellName}>{revealed ? entry.name : "???"}</Text>
               {revealed ? (
                 <View style={styles.badgeRow}>
-                  {entry.types.map((t) => (
-                    <TypeBadge key={t} type={t} />
+                  {entry.types.map((type) => (
+                    <TypeBadge key={type} type={type} />
                   ))}
                 </View>
               ) : (
-                <Text style={styles.unseen}>Not yet encountered</Text>
+                <Text style={styles.unseen}>{t("codex.unseen")}</Text>
               )}
               {revealed && entry.era && entry.era !== "wild" && (
-                <Text style={styles.eraLabel}>{ERA_LABELS[entry.era]}</Text>
+                <Text style={styles.eraLabel}>{c.era(entry.era)}</Text>
               )}
-              {caught && <Text style={styles.caughtLabel}>Caught</Text>}
-              {seen && !caught && <Text style={styles.seenLabel}>Seen</Text>}
+              {caught && <Text style={styles.caughtLabel}>{t("codex.caught")}</Text>}
+              {seen && !caught && <Text style={styles.seenLabel}>{t("codex.seen")}</Text>}
             </Pressable>
           );
         })}
       </ScrollView>
 
-      <PrimaryButton testID="back-button" label="Back" variant="secondary" onPress={() => navigation.goBack()} />
+      <PrimaryButton testID="back-button" label={t("common.back")} variant="secondary" onPress={() => navigation.goBack()} />
     </ScreenBackground>
   );
 }

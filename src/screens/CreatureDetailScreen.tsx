@@ -5,7 +5,7 @@ import type { RootStackParamList } from "../navigation/types";
 import { useGameStore } from "../state/gameStore";
 import { getDexEntry } from "../game/speciesCatalog";
 import { getMove } from "../game/movesRepo";
-import { partyMemberStats } from "../game/party";
+import { partyMemberStats, remainingPp } from "../game/party";
 import { xpToNextLevel } from "../game/progression";
 import { usableItems } from "../game/itemsRepo";
 import type { StatBlock } from "../data/schemas";
@@ -18,18 +18,13 @@ import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { LevelUpModal, type LevelUpRevealData } from "./components/LevelUpModal";
 import { EvolutionModal, type EvolutionRevealData } from "./components/EvolutionModal";
 import { MoveLearnModal, type MoveLearnPrompt } from "./components/MoveLearnModal";
+import { MoveDetailCard } from "./components/MoveDetailCard";
+import { useI18n } from "../i18n";
 import { colors } from "./theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CreatureDetail">;
 
-const STAT_LABELS: { key: keyof StatBlock; label: string }[] = [
-  { key: "hp", label: "HP" },
-  { key: "atk", label: "Attack" },
-  { key: "def", label: "Defense" },
-  { key: "spatk", label: "Sp. Attack" },
-  { key: "spdef", label: "Sp. Defense" },
-  { key: "speed", label: "Speed" },
-];
+const STAT_KEYS: (keyof StatBlock)[] = ["hp", "atk", "def", "spatk", "spdef", "speed"];
 
 /** Reference ceiling for the stat bars — Melita's base stats top out well under this. */
 const STAT_BAR_MAX = 180;
@@ -64,6 +59,8 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
   const [movePrompts, setMovePrompts] = useState<MoveLearnPrompt[]>([]);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
+  const [openMoveId, setOpenMoveId] = useState<string | null>(null);
+  const { t, c } = useI18n();
 
   useKeyboardShortcuts({ m: () => navigation.popToTop() });
 
@@ -73,16 +70,16 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
   if (params.source === "party" && !partyMember) {
     return (
       <ScreenBackground style={styles.container}>
-        <Text style={styles.notFound}>That party member could no longer be found.</Text>
-        <PrimaryButton testID="back-button" label="Back" onPress={() => navigation.goBack()} />
+        <Text style={styles.notFound}>{t("detail.notFound")}</Text>
+        <PrimaryButton testID="back-button" label={t("common.back")} onPress={() => navigation.goBack()} />
       </ScreenBackground>
     );
   }
   if (params.source === "species" && !dexEntry) {
     return (
       <ScreenBackground style={styles.container}>
-        <Text style={styles.notFound}>Unknown species.</Text>
-        <PrimaryButton testID="back-button" label="Back" onPress={() => navigation.goBack()} />
+        <Text style={styles.notFound}>{t("detail.unknown")}</Text>
+        <PrimaryButton testID="back-button" label={t("common.back")} onPress={() => navigation.goBack()} />
       </ScreenBackground>
     );
   }
@@ -92,8 +89,8 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
   const types = partyMember?.types ?? dexEntry!.types;
   const level = partyMember?.level ?? null;
   const stats = partyMember ? partyMemberStats(partyMember) : dexEntry?.stats;
-  const flavor = dexEntry?.flavor;
-  const signatureMove = dexEntry?.signatureMove;
+  const flavor = dexEntry ? c.flavor(dexEntry.speciesId) ?? dexEntry.flavor : undefined;
+  const signatureMove = dexEntry?.signatureMove ? c.signature(dexEntry.signatureMove) : undefined;
   const isCaught = params.source === "species" ? caughtSpeciesIds.includes(params.speciesId) : true;
 
   const applicableItems = usableItems().filter((item) => (inventory[item.id] ?? 0) > 0);
@@ -108,7 +105,8 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
     setRenaming(false);
   }
 
-  function handleUseItem(itemId: string, itemName: string) {
+  function handleUseItem(itemId: string) {
+    const itemName = c.item(itemId);
     if (!partyMember) return;
     const oldStats = partyMemberStats(partyMember);
     const oldLevel = partyMember.level;
@@ -116,11 +114,11 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
     if (!result.applied) return;
     setShowItems(false);
     if (result.effect === "heal") {
-      setItemFeedback(`${partyMember.displayName} used ${itemName} and recovered ${result.healedAmount} HP!`);
+      setItemFeedback(t("detail.healed", { name: partyMember.displayName, item: itemName, amount: result.healedAmount }));
     } else {
       const leveled = result.member;
       for (const moveId of result.moveLearning.learned) {
-        setItemFeedback(`${leveled.displayName} learned ${getMove(moveId).name}!`);
+        setItemFeedback(t("battle.learned", { name: leveled.displayName, move: c.move(moveId) }));
       }
       if (result.moveLearning.pending.length > 0) {
         setMovePrompts(
@@ -133,10 +131,10 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
         );
       }
       if (result.evolution) {
-        setItemFeedback(`${result.evolution.oldDisplayName} evolved into ${result.evolution.newDisplayName}!`);
+        setItemFeedback(t("evolve.done", { old: result.evolution.oldDisplayName, new: result.evolution.newDisplayName }));
         setEvolutionReveal(result.evolution);
       } else {
-        setItemFeedback(`${partyMember.displayName} drank ${itemName} and grew to level ${leveled.level}!`);
+        setItemFeedback(t("detail.grew", { name: partyMember.displayName, item: itemName, level: leveled.level }));
       }
       setLevelUpReveal({
         speciesId: leveled.speciesId,
@@ -171,26 +169,26 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
                   onSubmitEditing={handleSaveRename}
                 />
                 <Pressable testID="save-rename" onPress={handleSaveRename} style={styles.renameSaveBtn}>
-                  <Text style={styles.renameSaveBtnText}>Save</Text>
+                  <Text style={styles.renameSaveBtnText}>{t("common.save")}</Text>
                 </Pressable>
                 <Pressable testID="cancel-rename" onPress={() => setRenaming(false)} style={styles.renameCancelBtn}>
-                  <Text style={styles.renameCancelBtnText}>Cancel</Text>
+                  <Text style={styles.renameCancelBtnText}>{t("common.cancel")}</Text>
                 </Pressable>
               </View>
             ) : (
               <View style={styles.headerRow}>
                 <Text style={styles.name}>{name}</Text>
-                {level !== null && <Text style={styles.level}>Lv. {level}</Text>}
+                {level !== null && <Text style={styles.level}>{t("common.level", { level })}</Text>}
                 {partyMember && (
                   <Pressable testID="rename-button" onPress={handleStartRename} style={styles.renameButton}>
-                    <Text style={styles.renameButtonText}>Rename</Text>
+                    <Text style={styles.renameButtonText}>{t("detail.rename")}</Text>
                   </Pressable>
                 )}
               </View>
             )}
             <View style={styles.badgeRow}>
-              {types.map((t) => (
-                <TypeBadge key={t} type={t} />
+              {types.map((type) => (
+                <TypeBadge key={type} type={type} />
               ))}
             </View>
           </View>
@@ -198,10 +196,10 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
 
         {partyMember && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Condition</Text>
+            <Text style={styles.sectionTitle}>{t("detail.condition")}</Text>
             <HpBar currentHp={partyMember.currentHp} maxHp={partyMemberStats(partyMember).hp} />
             <Text style={styles.xpText}>
-              XP {partyMember.xp} / {xpToNextLevel(partyMember.level)} to Lv. {partyMember.level + 1}
+              {t("detail.xp", { xp: partyMember.xp, next: xpToNextLevel(partyMember.level), level: partyMember.level + 1 })}
             </Text>
             <Pressable
               testID="open-detail-item-sheet"
@@ -213,7 +211,7 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
               style={[styles.useItemButton, applicableItems.length === 0 && styles.useItemButtonDisabled]}
             >
               <Text style={[styles.useItemButtonText, applicableItems.length === 0 && styles.useItemButtonTextDisabled]}>
-                {applicableItems.length > 0 ? "Use Item" : "No usable items in Bag"}
+                {applicableItems.length > 0 ? t("detail.useItem") : t("detail.noItems")}
               </Text>
             </Pressable>
             {itemFeedback && <Text style={styles.flavorText}>{itemFeedback}</Text>}
@@ -222,39 +220,51 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
 
         {flavor && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{dexEntry?.category === "legendary" ? "Aesthetic" : "Flavor"}</Text>
+            <Text style={styles.sectionTitle}>{dexEntry?.category === "legendary" ? t("detail.aesthetic") : t("detail.flavor")}</Text>
             <Text style={styles.flavorText}>{flavor}</Text>
           </View>
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Base Stats</Text>
+          <Text style={styles.sectionTitle}>{t("detail.baseStats")}</Text>
           {stats ? (
-            STAT_LABELS.map(({ key, label }) => <StatBar key={key} label={label} value={stats[key]} />)
+            STAT_KEYS.map((key) => <StatBar key={key} label={c.stat(key)} value={stats[key]} />)
           ) : (
-            <Text style={styles.unrecorded}>
-              Not recorded yet — this stage's stats aren't in the data file (see docs/GAME_SPEC.md).
-            </Text>
+            <Text style={styles.unrecorded}>{t("detail.statsMissing")}</Text>
           )}
         </View>
 
         {signatureMove && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Signature Move</Text>
+            <Text style={styles.sectionTitle}>{t("detail.signature")}</Text>
             <Text style={styles.flavorText}>{signatureMove}</Text>
           </View>
         )}
 
         {partyMember && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Known Moves</Text>
+            <Text style={styles.sectionTitle}>{t("detail.moves")}</Text>
+            <Text style={styles.xpText}>{t("detail.movesHint")}</Text>
             {partyMember.moveIds.map((moveId) => {
               const move = getMove(moveId);
+              const open = openMoveId === moveId;
               return (
-                <View key={moveId} style={styles.moveRow}>
-                  <Text style={styles.moveName}>{move.name}</Text>
-                  <TypeBadge type={move.type} />
-                  <Text style={styles.movePower}>{move.power} pwr</Text>
+                <View key={moveId}>
+                  <Pressable
+                    testID={`detail-move-${moveId}`}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: open }}
+                    onPress={() => setOpenMoveId(open ? null : moveId)}
+                    style={({ pressed }) => [styles.moveRow, pressed && styles.moveRowPressed]}
+                  >
+                    <Text style={styles.moveName}>{c.move(moveId)}</Text>
+                    <TypeBadge type={move.type} />
+                    <Text style={styles.movePower}>
+                      {t("move.pp")} {t("move.ppLeft", { left: remainingPp(partyMember, moveId), max: move.pp })}
+                    </Text>
+                    <Text style={styles.moveChevron}>{open ? "▾" : "▸"}</Text>
+                  </Pressable>
+                  {open && <MoveDetailCard move={move} ppLeft={remainingPp(partyMember, moveId)} />}
                 </View>
               );
             })}
@@ -262,15 +272,15 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
         )}
 
         {params.source === "species" && !isCaught && (
-          <Text style={styles.unrecorded}>Not yet caught — details shown are from field observation only.</Text>
+          <Text style={styles.unrecorded}>{t("detail.uncaught")}</Text>
         )}
 
         {partyMember && party.length > 1 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Release</Text>
+            <Text style={styles.sectionTitle}>{t("detail.release")}</Text>
             {confirmingRelease ? (
               <View style={styles.releaseConfirmRow}>
-                <Text style={styles.flavorText}>Release {partyMember.displayName} for good? This can't be undone.</Text>
+                <Text style={styles.flavorText}>{t("detail.releaseConfirm", { name: partyMember.displayName })}</Text>
                 <View style={styles.releaseConfirmButtons}>
                   <Pressable
                     testID="confirm-release"
@@ -280,16 +290,16 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
                     }}
                     style={styles.releaseConfirmBtn}
                   >
-                    <Text style={styles.releaseConfirmBtnText}>Yes, release</Text>
+                    <Text style={styles.releaseConfirmBtnText}>{t("common.yesRelease")}</Text>
                   </Pressable>
                   <Pressable testID="cancel-release" onPress={() => setConfirmingRelease(false)} style={styles.releaseCancelBtn}>
-                    <Text style={styles.releaseCancelBtnText}>Cancel</Text>
+                    <Text style={styles.releaseCancelBtnText}>{t("common.cancel")}</Text>
                   </Pressable>
                 </View>
               </View>
             ) : (
               <Pressable testID="release-button" onPress={() => setConfirmingRelease(true)} style={styles.releaseButton}>
-                <Text style={styles.releaseButtonText}>Release {partyMember.displayName}</Text>
+                <Text style={styles.releaseButtonText}>{t("detail.releaseName", { name: partyMember.displayName })}</Text>
               </Pressable>
             )}
           </View>
@@ -299,23 +309,23 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
       <Modal visible={showItems} transparent animationType="none" onRequestClose={() => setShowItems(false)}>
         <View style={styles.sheetBackdrop}>
           <View style={styles.sheet}>
-            <Text style={styles.sectionTitle}>Use Item</Text>
+            <Text style={styles.sectionTitle}>{t("detail.useItem")}</Text>
             {applicableItems.map((item) => (
               <Pressable
                 key={item.id}
                 testID={`detail-use-item-${item.id}`}
-                onPress={() => handleUseItem(item.id, item.name)}
+                onPress={() => handleUseItem(item.id)}
                 style={styles.sheetRow}
               >
                 <Text style={styles.flavorText}>
-                  {item.name} <Text style={styles.xpText}>x{inventory[item.id] ?? 0}</Text>
+                  {c.item(item.id)} <Text style={styles.xpText}>x{inventory[item.id] ?? 0}</Text>
                 </Text>
                 <Text style={styles.xpText}>
-                  {item.effect === "heal" ? `+${item.healAmount} HP` : "+1 level"}
+                  {item.effect === "heal" ? t("common.healPlus", { amount: item.healAmount ?? 0 }) : t("common.levelPlus")}
                 </Text>
               </Pressable>
             ))}
-            <PrimaryButton label="Close" variant="secondary" onPress={() => setShowItems(false)} />
+            <PrimaryButton label={t("common.close")} variant="secondary" onPress={() => setShowItems(false)} />
           </View>
         </View>
       </Modal>
@@ -331,7 +341,11 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
             onReplace={(forgetMoveId) => {
               replacePartyMemberMove(movePrompts[0].uid, forgetMoveId, movePrompts[0].newMoveId);
               setItemFeedback(
-                `${movePrompts[0].displayName} forgot ${getMove(forgetMoveId).name} and learned ${getMove(movePrompts[0].newMoveId).name}!`
+                t("battle.forgotLearned", {
+                  name: movePrompts[0].displayName,
+                  old: c.move(forgetMoveId),
+                  new: c.move(movePrompts[0].newMoveId),
+                })
               );
               setMovePrompts((prev) => prev.slice(1));
             }}
@@ -340,7 +354,7 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
         )
       )}
 
-      <PrimaryButton testID="back-button" label="Back" variant="secondary" onPress={() => navigation.goBack()} />
+      <PrimaryButton testID="back-button" label={t("common.back")} variant="secondary" onPress={() => navigation.goBack()} />
     </ScreenBackground>
   );
 }
@@ -495,6 +509,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceAlt,
+  },
+  moveRowPressed: {
+    opacity: 0.75,
+  },
+  moveChevron: {
+    color: colors.textMuted,
+    fontSize: 14,
+    width: 14,
+    textAlign: "center",
   },
   moveName: {
     color: colors.text,

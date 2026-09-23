@@ -6,12 +6,14 @@ import { useGameStore } from "../state/gameStore";
 import { PrimaryButton } from "./components/PrimaryButton";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { colors } from "./theme";
+import { useI18n } from "../i18n";
 
 type Props = NativeStackScreenProps<RootStackParamList, "NameEntry">;
 
 export function NameEntryScreen({ navigation }: Props) {
   const setPlayerName = useGameStore((s) => s.setPlayerName);
   const [name, setName] = useState("");
+  const { t } = useI18n();
 
   function handleContinue() {
     setPlayerName(name);
@@ -21,13 +23,13 @@ export function NameEntryScreen({ navigation }: Props) {
   return (
     <ScreenBackground style={styles.container}>
       <View style={styles.body}>
-        <Text style={styles.eyebrow}>Before we set sail</Text>
-        <Text style={styles.title}>What should the islands call you?</Text>
+        <Text style={styles.eyebrow}>{t("name.eyebrow")}</Text>
+        <Text style={styles.title}>{t("name.prompt")}</Text>
         <TextInput
           testID="name-input"
           value={name}
           onChangeText={setName}
-          placeholder="Traveler"
+          placeholder={t("name.placeholder")}
           placeholderTextColor={colors.textMuted}
           style={styles.input}
           maxLength={16}
@@ -37,7 +39,7 @@ export function NameEntryScreen({ navigation }: Props) {
         />
       </View>
 
-      <PrimaryButton testID="name-continue" label="Continue" onPress={handleContinue} />
+      <PrimaryButton testID="name-continue" label={t("common.continue")} onPress={handleContinue} />
     </ScreenBackground>
   );
 }

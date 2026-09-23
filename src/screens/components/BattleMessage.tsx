@@ -1,15 +1,14 @@
 import { useEffect, useRef } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors } from "../theme";
+import { useI18n } from "../../i18n";
 
 /**
- * The battle's dialogue box: one beat of the fight, held on screen until the player taps it
- * away.
+ * The battle's dialogue box: one beat of the fight.
  *
- * The log alone was too fast to play on. A turn used to resolve on timers — both attacks, the
- * damage, the faint — and by the time you looked up the numbers had already scrolled. Nothing
- * in a battle advances on a clock any more: the player reads what happened, decides what it
- * means, and taps to continue.
+ * Whether it waits for a tap or moves on by itself is the Battle pace setting, decided by the
+ * caller and passed in as autoAdvanceMs. When it will move on, a bar drains along the bottom
+ * so the player can see how long they have — and a tap always skips ahead early either way.
  *
  * It sits over the action buttons rather than the creatures, so the thing the text is talking
  * about is still visible while you read about it.
@@ -19,6 +18,8 @@ export function BattleMessage({
   emphasis,
   onAdvance,
   remaining,
+  autoAdvanceMs = null,
+  large = false,
 }: {
   lines: string[];
   /** Draws the eye to the beat that changed the fight — a big hit, a faint, a medal. */
@@ -26,9 +27,35 @@ export function BattleMessage({
   onAdvance: () => void;
   /** How many more popups are queued behind this one, for the "keep tapping" hint. */
   remaining: number;
+  /** Move on by itself after this long, or null to wait for a tap. */
+  autoAdvanceMs?: number | null;
+  /** Larger text, from the Message text size setting. */
+  large?: boolean;
 }) {
+  const { t } = useI18n();
   const enter = useRef(new Animated.Value(0)).current;
   const nudge = useRef(new Animated.Value(0)).current;
+  const drain = useRef(new Animated.Value(1)).current;
+  // Mounted fresh for every popup (the caller keys it by id), so this guard is per message:
+  // a tap landing in the same frame as the timer still advances exactly once.
+  const doneRef = useRef(false);
+  const onAdvanceRef = useRef(onAdvance);
+  onAdvanceRef.current = onAdvance;
+  const advance = () => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onAdvanceRef.current();
+  };
+
+  useEffect(() => {
+    if (autoAdvanceMs === null) return;
+    drain.setValue(1);
+    Animated.timing(drain, { toValue: 0, duration: autoAdvanceMs, easing: Easing.linear, useNativeDriver: false }).start();
+    const timer = setTimeout(advance, autoAdvanceMs);
+    return () => clearTimeout(timer);
+    // Once per popup: the component is remounted for the next one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     enter.setValue(0);
@@ -58,8 +85,8 @@ export function BattleMessage({
     <Pressable
       testID="battle-message"
       accessibilityRole="button"
-      accessibilityLabel={`${lines.join(" ")}. Tap to continue.`}
-      onPress={onAdvance}
+      accessibilityLabel={`${lines.join(" ")}. ${t("common.tapToContinue")}.`}
+      onPress={advance}
       style={styles.catcher}
     >
       <Animated.View
@@ -71,14 +98,27 @@ export function BattleMessage({
         ]}
       >
         {lines.map((line, i) => (
-          <Text key={`${line}-${i}`} style={[styles.line, i === 0 && styles.lead]}>
+          <Text key={`${line}-${i}`} style={[styles.line, large && styles.lineLarge, i === 0 && styles.lead]}>
             {line}
           </Text>
         ))}
         <View style={styles.footer}>
-          <Text style={styles.hint}>{remaining > 0 ? `Tap to continue · ${remaining} more` : "Tap to continue"}</Text>
+          <Text style={styles.hint}>
+            {autoAdvanceMs !== null
+              ? t("common.tapToSkip")
+              : remaining > 0
+                ? t("common.tapToContinueMore", { count: remaining })
+                : t("common.tapToContinue")}
+          </Text>
           <Animated.Text style={[styles.caret, { transform: [{ translateY: caretY }] }]}>▼</Animated.Text>
         </View>
+        {autoAdvanceMs !== null && (
+          <View testID="battle-message-timer" style={styles.timerTrack}>
+            <Animated.View
+              style={[styles.timerFill, { width: drain.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) }]}
+            />
+          </View>
+        )}
       </Animated.View>
     </Pressable>
   );
@@ -112,6 +152,21 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     lineHeight: 21,
+  },
+  lineLarge: {
+    fontSize: 18,
+    lineHeight: 25,
+  },
+  timerTrack: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.surfaceAlt,
+    overflow: "hidden",
+    marginTop: 6,
+  },
+  timerFill: {
+    height: 3,
+    backgroundColor: colors.accent,
   },
   lead: {
     fontWeight: "700",

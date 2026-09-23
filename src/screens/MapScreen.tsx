@@ -22,6 +22,9 @@ import { BriefingModal } from "./components/BriefingModal";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { useMapLayout } from "./components/useMapLayout";
+import { useSettings } from "../state/settingsStore";
+import { encounterChance, type ControlSide } from "../game/settings";
+import { useI18n, currentI18n } from "../i18n";
 import { colors, world } from "./theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Map">;
@@ -32,11 +35,21 @@ const ENCOUNTER_CHANCE = 0.195;
  * matching the classic "surprise encounter" screen-flash from the mainline games. */
 const ENCOUNTER_FLASH_SEQUENCE = [1, 0, 1, 0, 1, 0, 1];
 const ENCOUNTER_FLASH_STEP_MS = 90;
+/** Reduced motion: one slow fade to white and back instead of seven fast strobes. */
+const GENTLE_FLASH_SEQUENCE = [0.85, 0];
+const GENTLE_FLASH_STEP_MS = 320;
 const DRAWER_WIDTH = 116;
 const TOTAL_STAGES = STAGES.length;
 /** Walking feedback ("trees block the path") is a passing note, not something to dismiss. */
 const TOAST_MS = 1800;
 const DPAD_BUTTON = 52;
+
+/** Where the movement control sits, per the player's thumb preference in Settings. */
+const SIDE_STYLE: Record<ControlSide, { alignItems: "flex-start" | "center" | "flex-end" }> = {
+  left: { alignItems: "flex-start" },
+  center: { alignItems: "center" },
+  right: { alignItems: "flex-end" },
+};
 
 type Direction = "up" | "down" | "left" | "right";
 
@@ -76,8 +89,14 @@ export function MapScreen({ navigation, route }: Props) {
   const party = useGameStore((s) => s.party);
   const medals = useGameStore((s) => s.medals);
   const defeatedTrainerIds = useGameStore((s) => s.defeatedTrainerIds);
-  const controlMode = useGameStore((s) => s.controlMode);
-  const setControlMode = useGameStore((s) => s.setControlMode);
+  const controlMode = useSettings((s) => s.controlMode);
+  const controlSide = useSettings((s) => s.controlSide);
+  const showFollower = useSettings((s) => s.showFollower);
+  const reducedMotion = useSettings((s) => s.reducedMotion);
+  const setSetting = useSettings((s) => s.set);
+  const setControlMode = (mode: "joystick" | "dpad") => setSetting("controlMode", mode);
+  const i18n = useI18n();
+  const { t, c } = i18n;
   const markStageVisited = useGameStore((s) => s.markStageVisited);
 
   const mapCols = map.rows[0].length;
@@ -93,7 +112,9 @@ export function MapScreen({ navigation, route }: Props) {
   // Decided once, as the zone opens: the store marks the stage visited when the briefing is
   // dismissed, and the briefing must not vanish mid-read when that lands.
   const [briefing, setBriefing] = useState<BriefingPage[]>(() =>
-    briefingsOnEntry(map.zoneId, useGameStore.getState().visitedStageIds)
+    briefingsOnEntry(map.zoneId, useGameStore.getState().visitedStageIds, currentI18n(), {
+      stageBriefings: useSettings.getState().stageBriefings,
+    })
   );
   /** A one-off notice that has to be acknowledged — the chapel, a barred gate. */
   const [notice, setNotice] = useState<BriefingPage | null>(null);
@@ -139,6 +160,13 @@ export function MapScreen({ navigation, route }: Props) {
   const cameraY = cameraOffset(anim.y, mapRows, layout.viewportHeight, tile);
   const toPx = (v: Animated.Value) => Animated.multiply(v, tile);
 
+  function flashSequence() {
+    const [steps, ms] = reducedMotion
+      ? [GENTLE_FLASH_SEQUENCE, GENTLE_FLASH_STEP_MS]
+      : [ENCOUNTER_FLASH_SEQUENCE, ENCOUNTER_FLASH_STEP_MS];
+    return steps.map((toValue) => Animated.timing(encounterFlash, { toValue, duration: ms, useNativeDriver: false }));
+  }
+
   function move(direction: Direction) {
     if (busy || modalOpen) return;
     setFacing(direction);
@@ -146,7 +174,7 @@ export function MapScreen({ navigation, route }: Props) {
     const next = { row: position.row + dRow, col: position.col + dCol };
 
     if (!isWalkable(map, next.row, next.col)) {
-      setToast("Can't walk that way — trees block the path.");
+      setToast(t("map.treesBlock"));
       return;
     }
 
@@ -155,9 +183,7 @@ export function MapScreen({ navigation, route }: Props) {
     const blocker = trainerAt(map.zoneId, next.row, next.col);
     if (blocker && !defeatedTrainerIds.includes(blocker.id)) {
       setBusy(true);
-      const flashes = ENCOUNTER_FLASH_SEQUENCE.map((toValue) =>
-        Animated.timing(encounterFlash, { toValue, duration: ENCOUNTER_FLASH_STEP_MS, useNativeDriver: false })
-      );
+      const flashes = flashSequence();
       Animated.sequence(flashes).start(() => {
         encounterFlash.setValue(0);
         setBusy(false);
@@ -185,14 +211,12 @@ export function MapScreen({ navigation, route }: Props) {
       if (isExitTile(map, next.row, next.col) && map.exitTo) {
         const gate = medalRequiredToEnter(map.exitTo);
         if (gate && !medals.includes(gate.medalId)) {
+          const medal = c.medal(gate.medalId);
           setNotice({
             id: "gate",
-            kicker: "The way is barred",
-            title: `The ${gate.medalName} is needed`,
-            lines: [
-              `The road ahead only opens to someone carrying the ${gate.medalName}.`,
-              `${gate.leaderName} holds it. Beat them to go on.`,
-            ],
+            kicker: t("map.gate.kicker"),
+            title: t("map.gate.title", { medal }),
+            lines: [t("map.gate.line1", { medal }), t("map.gate.line2", { leader: gate.leaderName })],
           });
           setBusy(false);
           return;
@@ -220,12 +244,14 @@ export function MapScreen({ navigation, route }: Props) {
         const healedCount = healFaintedPartyMembers();
         setNotice({
           id: "chapel",
-          kicker: "Chapel",
-          title: healedCount > 0 ? "Your party is restored" : "A quiet moment",
+          kicker: t("map.chapel.kicker"),
+          title: healedCount > 0 ? t("map.chapel.restored") : t("map.chapel.quiet"),
           lines: [
-            healedCount > 0
-              ? `${healedCount} creature${healedCount === 1 ? " is" : "s are"} back to full health, every move recharged.`
-              : "Your party is already rested. Come back when the road has worn them down.",
+            healedCount === 0
+              ? t("map.chapel.rested")
+              : healedCount === 1
+                ? t("map.chapel.healedOne")
+                : t("map.chapel.healedMany", { count: healedCount }),
           ],
         });
         if (healedCount > 0) {
@@ -240,12 +266,10 @@ export function MapScreen({ navigation, route }: Props) {
       }
 
       const biome = biomeAt(map, next.row, next.col);
-      if (biome && Math.random() < ENCOUNTER_CHANCE) {
+      if (biome && Math.random() < encounterChance(ENCOUNTER_CHANCE, useSettings.getState().encounterRate)) {
         // Screen-flash transition before cutting to Battle — busy stays true
         // for the whole sequence so the player can't walk away mid-flash.
-        const flashAnimations = ENCOUNTER_FLASH_SEQUENCE.map((toValue) =>
-          Animated.timing(encounterFlash, { toValue, duration: ENCOUNTER_FLASH_STEP_MS, useNativeDriver: false })
-        );
+        const flashAnimations = flashSequence();
         Animated.sequence(flashAnimations).start(() => {
           encounterFlash.setValue(0);
           setBusy(false);
@@ -316,7 +340,7 @@ export function MapScreen({ navigation, route }: Props) {
           </View>
         ))}
 
-        {leadCreature && (
+        {leadCreature && showFollower && (
           <Animated.View
             testID="follower-creature"
             pointerEvents="none"
@@ -352,10 +376,9 @@ export function MapScreen({ navigation, route }: Props) {
       {/* Where you are, laid over the corner of the map rather than taking a band of screen. */}
       <View testID="zone-badge" pointerEvents="none" style={[styles.badge, compact && styles.badgeCompact]}>
         <Text style={styles.badgeKicker}>
-          Stage {stage?.stage ?? 1} of {TOTAL_STAGES}
-          {stage?.gym ? " · Gym" : ""}
+          {t(stage?.gym ? "map.stageBadgeGym" : "map.stageBadge", { stage: stage?.stage ?? 1, total: TOTAL_STAGES })}
         </Text>
-        <Text style={styles.badgeTitle}>{map.zoneName}</Text>
+        <Text style={styles.badgeTitle}>{c.stage(map.zoneId)}</Text>
       </View>
 
       {toast && (
@@ -377,11 +400,12 @@ export function MapScreen({ navigation, route }: Props) {
         ]}
       >
         {[
-          { label: "Party", testID: "drawer-party", go: () => navigation.navigate("Party") },
-          { label: "Bag", testID: "drawer-bag", go: () => navigation.navigate("Bag") },
-          { label: "Codex", testID: "drawer-codex", go: () => navigation.navigate("Codex") },
-          { label: "Shop", testID: "drawer-shop", go: () => navigation.navigate("Shop") },
-          { label: "Menu", testID: "menu-button", go: () => navigation.navigate("Home") },
+          { label: t("home.party"), testID: "drawer-party", go: () => navigation.navigate("Party") },
+          { label: t("home.bag"), testID: "drawer-bag", go: () => navigation.navigate("Bag") },
+          { label: t("home.codex"), testID: "drawer-codex", go: () => navigation.navigate("Codex") },
+          { label: t("home.shop"), testID: "drawer-shop", go: () => navigation.navigate("Shop") },
+          { label: t("home.settings"), testID: "drawer-settings", go: () => navigation.navigate("Settings") },
+          { label: t("map.menu"), testID: "menu-button", go: () => navigation.navigate("Home") },
         ].map((entry) => (
           <Pressable
             key={entry.label}
@@ -410,7 +434,7 @@ export function MapScreen({ navigation, route }: Props) {
       <View
         testID="map-controls"
         pointerEvents="box-none"
-        style={[styles.controls, compact ? styles.controlsCompact : styles.controlsWide]}
+        style={[styles.controls, compact ? styles.controlsCompact : styles.controlsWide, SIDE_STYLE[controlSide]]}
       >
         {controlMode === "joystick" ? (
           <Joystick onStep={move} disabled={busy || modalOpen} overlay />
@@ -430,9 +454,15 @@ export function MapScreen({ navigation, route }: Props) {
       <Pressable
         testID="toggle-control-mode"
         onPress={() => setControlMode(controlMode === "joystick" ? "dpad" : "joystick")}
-        style={({ pressed }) => [styles.controlToggle, compact && styles.controlToggleCompact, pressed && styles.controlTogglePressed]}
+        style={({ pressed }) => [
+          styles.controlToggle,
+          compact && styles.controlToggleCompact,
+          // Kept in the corner the controls are not in, so the two never overlap.
+          controlSide === "right" && styles.controlToggleLeft,
+          pressed && styles.controlTogglePressed,
+        ]}
       >
-        <Text style={styles.controlToggleText}>{controlMode === "joystick" ? "D-pad" : "Joystick"}</Text>
+        <Text style={styles.controlToggleText}>{controlMode === "joystick" ? t("map.dpad") : t("map.joystick")}</Text>
       </Pressable>
     </View>
   );
@@ -555,10 +585,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 36,
+    paddingHorizontal: 22,
   },
   controlsWide: {
-    left: 18,
+    left: 0,
+    right: 0,
     bottom: 18,
+    paddingHorizontal: 18,
   },
   dpad: {
     alignItems: "center",
@@ -605,6 +638,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#000000",
     backgroundColor: "transparent",
+  },
+  controlToggleLeft: {
+    right: undefined,
+    left: 14,
   },
   controlToggleCompact: {
     bottom: 36,

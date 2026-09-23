@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { ALL_TYPES, typeMatchups } from "../../engine/typeChart";
 import type { TypeName } from "../../data/schemas";
 import { colors, TYPE_COLORS } from "../theme";
+import { useI18n } from "../../i18n";
 
 /**
  * The full effectiveness chart, one type at a time.
@@ -13,7 +14,9 @@ import { colors, TYPE_COLORS } from "../theme";
  * both directions in words, and tapping one opens it.
  */
 export function TypeChartTable() {
+  const { t, c } = useI18n();
   const [open, setOpen] = useState<TypeName | null>(null);
+  const names = (types: TypeName[]) => types.map((type) => c.type(type));
 
   return (
     <View style={styles.wrap}>
@@ -28,23 +31,25 @@ export function TypeChartTable() {
               style={styles.header}
             >
               <View style={[styles.chip, { backgroundColor: TYPE_COLORS[type] ?? colors.border }]}>
-                <Text style={styles.chipText}>{type}</Text>
+                <Text style={styles.chipText}>{c.type(type)}</Text>
               </View>
               <Text style={styles.summary} numberOfLines={expanded ? undefined : 1}>
-                {m.strongAgainst.length ? `Strong vs ${m.strongAgainst.join(", ")}` : "Never super effective"}
+                {m.strongAgainst.length
+                  ? t("types.strongVs", { types: names(m.strongAgainst).join(", ") })
+                  : t("types.neverSuper")}
               </Text>
               <Text style={styles.caret}>{expanded ? "▾" : "▸"}</Text>
             </Pressable>
 
             {expanded && (
               <View testID={`type-detail-${type}`} style={styles.detail}>
-                <Row label="Deals double to" value={m.strongAgainst} tone="good" />
-                <Row label="Deals half to" value={m.weakAgainst} tone="bad" />
-                <Row label="Does nothing to" value={m.noEffectAgainst} tone="bad" />
+                <Row label={t("types.dealsDouble")} value={names(m.strongAgainst)} tone="good" />
+                <Row label={t("types.dealsHalf")} value={names(m.weakAgainst)} tone="bad" />
+                <Row label={t("types.doesNothing")} value={names(m.noEffectAgainst)} tone="bad" />
                 <View style={styles.rule} />
-                <Row label="Takes double from" value={m.weakTo} tone="bad" />
-                <Row label="Takes half from" value={m.resists} tone="good" />
-                <Row label="Untouchable by" value={m.immuneTo} tone="good" />
+                <Row label={t("types.takesDouble")} value={names(m.weakTo)} tone="bad" />
+                <Row label={t("types.takesHalf")} value={names(m.resists)} tone="good" />
+                <Row label={t("types.untouchable")} value={names(m.immuneTo)} tone="good" />
               </View>
             )}
           </View>
@@ -54,7 +59,7 @@ export function TypeChartTable() {
   );
 }
 
-function Row({ label, value, tone }: { label: string; value: TypeName[]; tone: "good" | "bad" }) {
+function Row({ label, value, tone }: { label: string; value: string[]; tone: "good" | "bad" }) {
   if (!value.length) return null;
   return (
     <View style={styles.row}>

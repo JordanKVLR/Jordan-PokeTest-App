@@ -6,6 +6,7 @@ import { PrimaryButton } from "./components/PrimaryButton";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { colors } from "./theme";
 import { TitleLandscape } from "../art/titleLandscape";
+import { useI18n } from "../i18n";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Title">;
 
@@ -14,6 +15,7 @@ export function TitleScreen({ navigation }: Props) {
   const hasSave = useGameStore((s) => s.party.length > 0);
   const currentZoneId = useGameStore((s) => s.currentZoneId);
   const resetGame = useGameStore((s) => s.resetGame);
+  const { t } = useI18n();
 
   function handleNewGame() {
     if (hasSave) resetGame();
@@ -31,22 +33,28 @@ export function TitleScreen({ navigation }: Props) {
         <Text style={styles.crestGlyph}>✛</Text>
       </View>
       <View style={styles.titleBlock}>
-        <Text style={styles.title}>A Maltese Tale</Text>
-        <Text style={styles.subtitle}>Catch what the islands left behind</Text>
+        <Text style={styles.title}>{t("title.name")}</Text>
+        <Text style={styles.subtitle}>{t("title.tagline")}</Text>
       </View>
 
       <View style={styles.actions}>
-        <PrimaryButton testID="new-game" label="New Game" onPress={handleNewGame} />
+        <PrimaryButton testID="new-game" label={t("title.newGame")} onPress={handleNewGame} />
         <PrimaryButton
           testID="continue-game"
-          label="Continue"
+          label={t("common.continue")}
           onPress={handleContinue}
           disabled={!hasHydrated || !hasSave}
           variant="secondary"
         />
         {hasHydrated && !hasSave && (
-          <Text style={styles.hint}>No save file yet — start a New Game to create one.</Text>
+          <Text style={styles.hint}>{t("title.noSave")}</Text>
         )}
+        <PrimaryButton
+          testID="title-settings"
+          label={t("title.settings")}
+          variant="secondary"
+          onPress={() => navigation.navigate("Settings")}
+        />
       </View>
     </ScreenBackground>
   );

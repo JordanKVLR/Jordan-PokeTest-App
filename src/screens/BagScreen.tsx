@@ -9,12 +9,20 @@ import { PrimaryButton } from "./components/PrimaryButton";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { colors } from "./theme";
+import { useI18n } from "../i18n";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Bag">;
 
 export function BagScreen({ navigation }: Props) {
   const inventory = useGameStore((s) => s.inventory);
   const [category, setCategory] = useState<ItemCategory>("balls");
+  const { t, c } = useI18n();
+  const TAB_LABEL: Record<ItemCategory, string> = {
+    balls: t("bag.balls"),
+    medicine: t("bag.medicine"),
+    key_items: t("bag.keyItems"),
+    battle_items: t("bag.battleItems"),
+  };
 
   useKeyboardShortcuts({ m: () => navigation.popToTop() });
 
@@ -22,17 +30,17 @@ export function BagScreen({ navigation }: Props) {
 
   return (
     <ScreenBackground style={styles.container}>
-      <Text style={styles.title}>Bag</Text>
+      <Text style={styles.title}>{t("bag.title")}</Text>
 
       <View style={styles.tabRow}>
-        {ITEM_CATEGORIES.map((c) => (
+        {ITEM_CATEGORIES.map((cat) => (
           <Pressable
-            key={c.key}
-            testID={`bag-tab-${c.key}`}
-            onPress={() => setCategory(c.key)}
-            style={[styles.tab, category === c.key && styles.tabActive]}
+            key={cat.key}
+            testID={`bag-tab-${cat.key}`}
+            onPress={() => setCategory(cat.key)}
+            style={[styles.tab, category === cat.key && styles.tabActive]}
           >
-            <Text style={[styles.tabText, category === c.key && styles.tabTextActive]}>{c.label}</Text>
+            <Text style={[styles.tabText, category === cat.key && styles.tabTextActive]}>{TAB_LABEL[cat.key]}</Text>
           </Pressable>
         ))}
       </View>
@@ -41,23 +49,23 @@ export function BagScreen({ navigation }: Props) {
         {items.map((item) => (
           <View key={item.id} style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.itemName}>{c.item(item.id)}</Text>
               <Text style={styles.itemQty}>x{inventory[item.id] ?? 0}</Text>
             </View>
-            <Text style={styles.itemDescription}>{item.description}</Text>
+            <Text style={styles.itemDescription}>{c.itemDescription(item.id)}</Text>
             {item.catchMultiplier && (
-              <Text style={styles.itemMeta}>Catch multiplier: {item.catchMultiplier.toFixed(1)}x</Text>
+              <Text style={styles.itemMeta}>{t("bag.catchMultiplier", { value: item.catchMultiplier.toFixed(1) })}</Text>
             )}
             {item.effect === "heal" && item.healAmount && (
-              <Text style={styles.itemMeta}>Restores {item.healAmount} HP</Text>
+              <Text style={styles.itemMeta}>{t("bag.restores", { amount: item.healAmount })}</Text>
             )}
-            {item.effect === "level_up" && <Text style={styles.itemMeta}>Instantly grants +1 level</Text>}
+            {item.effect === "level_up" && <Text style={styles.itemMeta}>{t("bag.levelUp")}</Text>}
           </View>
         ))}
-        {items.length === 0 && <Text style={styles.empty}>Nothing here yet.</Text>}
+        {items.length === 0 && <Text style={styles.empty}>{t("bag.empty")}</Text>}
       </ScrollView>
 
-      <PrimaryButton testID="back-button" label="Back" variant="secondary" onPress={() => navigation.goBack()} />
+      <PrimaryButton testID="back-button" label={t("common.back")} variant="secondary" onPress={() => navigation.goBack()} />
     </ScreenBackground>
   );
 }
