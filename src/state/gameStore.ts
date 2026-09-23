@@ -15,15 +15,31 @@ import {
 } from "../game/party";
 import { defaultStartingInventory, getItem } from "../game/itemsRepo";
 import { getMove } from "../game/movesRepo";
+import { STAGES, getStage } from "../game/zoneProgression";
 
 export type ControlMode = "joystick" | "dpad";
 
 const SAVE_KEY = "melita-save";
-const SAVE_VERSION = 1;
+/**
+ * 2 added visitedStageIds. A save from before then has no record of where the player has been,
+ * so the migration below credits them with every stage up to the one they are standing in —
+ * the route is linear, so that is exactly the set they must have walked through.
+ */
+const SAVE_VERSION = 2;
 const STARTING_ZONE_ID = "melita_woods";
 const DEFAULT_PLAYER_NAME = "Traveler";
 const MAX_PARTY_SIZE = 6;
 const STARTING_CURRENCY = 50;
+
+/**
+ * Every stage a pre-v2 save must already have passed through. Stages only open in order, so
+ * a player standing in stage N walked through 1..N. A save with no party never started.
+ */
+export function stagesReachedBy(currentZoneId: string | undefined, partySize: number): string[] {
+  if (partySize === 0) return [];
+  const current = getStage(currentZoneId ?? STARTING_ZONE_ID)?.stage ?? 1;
+  return STAGES.filter((s) => s.stage <= current).map((s) => s.id);
+}
 
 export interface ExperienceGainResult {
   member: PartyMember;
@@ -69,6 +85,10 @@ interface GameState {
   /** Trainers already beaten, so they don't re-challenge on every pass. */
   defeatedTrainerIds: string[];
   markTrainerDefeated: (trainerId: string) => void;
+  /** Stages the player has already been briefed on. A stage's briefing plays on the first
+   * entry only — walking back into it, or back through it after clearing it, says nothing. */
+  visitedStageIds: string[];
+  markStageVisited: (zoneId: string) => void;
 
   selectStarter: (line: StarterLineName) => void;
   recordBattleResult: (won: boolean) => void;
@@ -134,6 +154,11 @@ export const useGameStore = create<GameState>()(
         state.defeatedTrainerIds.includes(trainerId)
           ? state
           : { defeatedTrainerIds: [...state.defeatedTrainerIds, trainerId] }
+      ),
+    visitedStageIds: [],
+    markStageVisited: (zoneId) =>
+      set((state) =>
+        state.visitedStageIds.includes(zoneId) ? state : { visitedStageIds: [...state.visitedStageIds, zoneId] }
       ),
 
     selectStarter: (line) => {
@@ -312,6 +337,7 @@ export const useGameStore = create<GameState>()(
       set({
         medals: [],
         defeatedTrainerIds: [],
+        visitedStageIds: [],
         playerName: DEFAULT_PLAYER_NAME,
         selectedLine: null,
         currentZoneId: STARTING_ZONE_ID,
@@ -334,6 +360,7 @@ export const useGameStore = create<GameState>()(
         controlMode: state.controlMode,
         medals: state.medals,
         defeatedTrainerIds: state.defeatedTrainerIds,
+        visitedStageIds: state.visitedStageIds,
         playerName: state.playerName,
         selectedLine: state.selectedLine,
         currentZoneId: state.currentZoneId,
@@ -344,6 +371,11 @@ export const useGameStore = create<GameState>()(
         inventory: state.inventory,
         currency: state.currency,
       }),
+      migrate: (persisted, fromVersion) => {
+        const save = (persisted ?? {}) as { currentZoneId?: string; party?: unknown[]; visitedStageIds?: string[] };
+        if (fromVersion < 2) save.visitedStageIds = stagesReachedBy(save.currentZoneId, save.party?.length ?? 0);
+        return save as unknown as GameState;
+      },
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

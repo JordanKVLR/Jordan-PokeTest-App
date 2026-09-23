@@ -19,7 +19,17 @@ const AXIS_FLIP_RATIO = 1.7;
  * reports a direction and repeats while held, rather than giving free analogue movement —
  * so the grid, the encounter checks and the D-pad all keep working the same way.
  */
-export function Joystick({ onStep, disabled }: { onStep: (direction: Direction) => void; disabled?: boolean }) {
+export function Joystick({
+  onStep,
+  disabled,
+  overlay,
+}: {
+  onStep: (direction: Direction) => void;
+  disabled?: boolean;
+  /** Drawn over the map rather than below it: black ring and knob, nothing filled in behind,
+   * so the world stays visible through the control. */
+  overlay?: boolean;
+}) {
   const knob = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const [active, setActive] = useState(false);
   const repeatTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -107,11 +117,24 @@ export function Joystick({ onStep, disabled }: { onStep: (direction: Direction) 
   ).current;
 
   return (
-    <View testID="joystick" style={[styles.base, active && styles.baseActive]} {...pan.panHandlers}>
-      <View style={styles.crosshair} />
+    <View
+      testID="joystick"
+      style={[
+        styles.base,
+        active && styles.baseActive,
+        overlay && styles.baseOverlay,
+        overlay && active && styles.baseOverlayActive,
+      ]}
+      {...pan.panHandlers}
+    >
+      <View style={[styles.crosshair, overlay && styles.crosshairOverlay]} />
       <Animated.View
         testID="joystick-knob"
-        style={[styles.knob, { transform: [{ translateX: knob.x }, { translateY: knob.y }] }]}
+        style={[
+          styles.knob,
+          overlay && styles.knobOverlay,
+          { transform: [{ translateX: knob.x }, { translateY: knob.y }] },
+        ]}
       />
     </View>
   );
@@ -152,5 +175,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     borderWidth: 2,
     borderColor: colors.accentDeep,
+  },
+  // Overlay look: same geometry, but the base is only an outline so the map shows through, and
+  // the knob — the part you actually touch — is the one solid black thing.
+  baseOverlay: {
+    backgroundColor: "transparent",
+    borderColor: "#000000",
+    borderWidth: 2.5,
+    shadowOpacity: 0,
+  },
+  baseOverlayActive: {
+    backgroundColor: "rgba(0,0,0,0.08)",
+  },
+  crosshairOverlay: {
+    borderColor: "#000000",
+    opacity: 0.45,
+  },
+  knobOverlay: {
+    backgroundColor: "#000000",
+    borderColor: "rgba(255,255,255,0.7)",
+    opacity: 0.85,
   },
 });
