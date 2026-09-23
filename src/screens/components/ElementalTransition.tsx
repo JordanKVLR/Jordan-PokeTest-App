@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from "react";
-import { Animated, Dimensions, Easing, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Dimensions, Easing, Pressable, StyleSheet, Text } from "react-native";
 import Svg, { Circle, Path, Polygon, Rect } from "react-native-svg";
 import type { TypeName } from "../../data/schemas";
 import { TYPE_COLORS, shade } from "../theme";
@@ -70,14 +70,16 @@ export function ElementalTransition({
   const base = TYPE_COLORS[type] ?? "#8a9aa5";
   const seed = useMemo(() => [...trainerName].reduce((h, c) => h + c.charCodeAt(0), 7), [trainerName]);
 
+  const [ready, setReady] = useState(false);
+
   useEffect(() => {
     Animated.sequence([
       Animated.timing(progress, { toValue: 1, duration: DURATION, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
       Animated.timing(textFade, { toValue: 1, duration: 320, useNativeDriver: false }),
-      Animated.delay(1100),
-      Animated.timing(textFade, { toValue: 0, duration: 260, useNativeDriver: false }),
     ]).start(({ finished }) => {
-      if (finished) onDone();
+      // The wipe no longer times itself out. Once the trainer's line is legible it stays there
+      // until the player taps it away — the same rule the rest of the battle now follows.
+      if (finished) setReady(true);
     });
     // onDone is a fresh closure each render; re-running the sequence would restart the wipe.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -88,7 +90,15 @@ export function ElementalTransition({
   const washOpacity = progress.interpolate({ inputRange: [0, 0.45, 1], outputRange: [0, 0.94, 1] });
 
   return (
-    <View testID={`elemental-transition-${type}`} style={StyleSheet.absoluteFill} pointerEvents="none">
+    <Pressable
+      testID={`elemental-transition-${type}`}
+      accessibilityRole="button"
+      accessibilityLabel={`${trainerName}. ${line}. Tap to begin the battle.`}
+      onPress={() => {
+        if (ready) onDone();
+      }}
+      style={StyleSheet.absoluteFill}
+    >
       <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: shade(base, 0.55), opacity: washOpacity }]} />
 
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: progress }]}>
@@ -110,8 +120,13 @@ export function ElementalTransition({
       <Animated.View style={[styles.textWrap, { opacity: textFade }]}>
         <Text style={styles.name}>{trainerName}</Text>
         <Text style={styles.line}>“{line}”</Text>
+        {ready && (
+          <Text testID="transition-continue" style={styles.tap}>
+            Tap to begin
+          </Text>
+        )}
       </Animated.View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -243,5 +258,12 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: "center",
     fontStyle: "italic",
+  },
+  tap: {
+    marginTop: 26,
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.4,
   },
 });

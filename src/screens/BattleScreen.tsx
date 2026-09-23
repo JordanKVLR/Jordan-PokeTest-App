@@ -40,6 +40,7 @@ import { MoveLearnModal, type MoveLearnPrompt } from "./components/MoveLearnModa
 import { BlackoutOverlay } from "./components/BlackoutOverlay";
 import { VictoryOverlay } from "./components/VictoryOverlay";
 import { ElementalTransition } from "./components/ElementalTransition";
+import { BattleMessage } from "./components/BattleMessage";
 import { getMap, findTilePosition } from "../game/mapData";
 import { getZoneName } from "../game/zones";
 import { colors } from "./theme";
@@ -52,7 +53,15 @@ type Props = NativeStackScreenProps<RootStackParamList, "Battle">;
 const WILD_BASE_CATCH_RATE = 190;
 const MAX_LOG_LINES = 5;
 /** Pause between the first and second actor's reveal, so each turn plays out in two beats rather than instantly. */
-const TURN_BEAT_DELAY_MS = 550;
+/** How long the strike plays before its result is shown — long enough to see the hit land. */
+const STRIKE_PLAY_MS = 620;
+
+/** One thing the battle has to tell the player, and what happens once they acknowledge it. */
+interface BattlePopup {
+  lines: string[];
+  after?: () => void;
+  emphasis?: "none" | "good" | "bad";
+}
 /** A hit clearing this fraction of max HP counts as a "big" hit for animation purposes. */
 const BIG_HIT_FRACTION = 0.25;
 
@@ -182,15 +191,7 @@ export function BattleScreen({ navigation, route }: Props) {
   // Trainer fights open on an elemental wipe carrying that line; wild encounters start straight
   // away, because the grass has nothing to say.
   const [intro, setIntro] = useState(() => Boolean(trainer));
-  const [log, setLog] = useState<string[]>(() =>
-    route.params.trainerId
-      ? [
-          getTrainer(route.params.trainerId)?.intro ?? "A challenger appears!",
-          ...(boast ? [`${trainer?.name ?? "They"}: "${boast}"`] : []),
-          `They send out ${enemyTeam[0]?.displayName ?? "a creature"}!`,
-        ]
-      : [`A wild ${enemy.displayName} appeared!`]
-  );
+  const [log, setLog] = useState<string[]>([]);
   const [outcome, setOutcome] = useState<Outcome>(null);
   const [rewards, setRewards] = useState<BattleRewards | null>(null);
   const [showParty, setShowParty] = useState(false);
@@ -198,6 +199,14 @@ export function BattleScreen({ navigation, route }: Props) {
   const [showTraps, setShowTraps] = useState(false);
   const [forcedSwitchPending, setForcedSwitchPending] = useState(false);
   const [resolving, setResolving] = useState(false);
+  /**
+   * Everything the battle wants to tell the player, one popup at a time.
+   *
+   * Nothing in a fight advances on a timer any more. A beat is queued, the player reads it and
+   * taps, and only then does the next thing happen — which is what `after` carries. Turn
+   * resolution is therefore driven by dismissals rather than setTimeout chains.
+   */
+  const [popups, setPopups] = useState<BattlePopup[]>([]);
   const [levelUpReveal, setLevelUpReveal] = useState<LevelUpRevealData | null>(null);
   /** Takes priority over levelUpReveal — an evolution reveal always plays first, then falls
    * through to the stat-comparison screen once dismissed (see the render's priority chain). */
@@ -248,6 +257,28 @@ export function BattleScreen({ navigation, route }: Props) {
     setLog((prev) => [...prev, ...lines].slice(-MAX_LOG_LINES));
   }
 
+  /**
+   * Queues one popup. The lines land in the scrolling log straight away (so the history stays
+   * complete) and on screen as a box the player has to dismiss. `after` runs on that dismissal,
+   * which is how a turn steps forward.
+   */
+  function say(lines: string[], options: { after?: () => void; emphasis?: BattlePopup["emphasis"] } = {}) {
+    const text = lines.filter(Boolean);
+    if (text.length === 0) {
+      options.after?.();
+      return;
+    }
+    pushLog(text);
+    setPopups((prev) => [...prev, { lines: text, after: options.after, emphasis: options.emphasis }]);
+  }
+
+  function advancePopup() {
+    const current = popups[0];
+    setPopups((prev) => prev.slice(1));
+    // Run the continuation after the slice so anything it queues lands behind what is left.
+    current?.after?.();
+  }
+
   /** The enemy is rationed too, so it can't spam a 6-PP heavy hitter all battle. Falls back
    * to Scrap once everything is spent, exactly as the player does. */
   function pickEnemyMoveId(): string {
@@ -263,7 +294,7 @@ export function BattleScreen({ navigation, route }: Props) {
     const dropped = Math.random() < KINNIE_DROP_CHANCE;
     if (dropped) {
       addItem("kinnie", 1);
-      pushLog([`Wild ${enemy.displayName} dropped a Kinnie!`]);
+      say([`Wild ${enemy.displayName} dropped a Kinnie!`], { emphasis: "good" });
     }
     return dropped;
   }
@@ -281,17 +312,17 @@ export function BattleScreen({ navigation, route }: Props) {
 
     if (trainer) {
       markTrainerDefeated(trainer.id);
-      pushLog([trainer.defeatLine]);
+      say([trainer.defeatLine], { emphasis: "good" });
       if (trainer.medalId) {
         awardMedal(trainer.medalId);
-        pushLog([`You earned the ${trainer.medalName}!`]);
+        say([`You earned the ${trainer.medalName}!`], { emphasis: "good" });
       }
       // Beating everyone is the win condition. The store update above is async as far as this
       // render is concerned, so count this trainer in by hand rather than reading it back.
       const progress = completionProgress([...defeatedTrainerIds, trainer.id]);
       if (progress.complete) {
         setCompletion(progress);
-        pushLog(["There is no one left to fight."]);
+        say(["There is no one left to fight."], { emphasis: "good" });
       }
     }
 
@@ -331,6 +362,26 @@ export function BattleScreen({ navigation, route }: Props) {
     const pending = afterLevelUpDismissRef.current;
     afterLevelUpDismissRef.current = null;
     pending?.();
+  }
+
+  // The battle opens with its own messages rather than a pre-filled log. For a trainer the
+  // elemental wipe plays first and queues these as it closes, so the order is: wipe, their
+  // line, the creature they send out, then your move.
+  const openedRef = useRef(false);
+  useEffect(() => {
+    if (openedRef.current || trainer) return;
+    openedRef.current = true;
+    say([`A wild ${enemy.displayName} appeared!`]);
+    // Only on mount: this is the battle's opening beat, not something that re-fires.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function openTrainerBattle() {
+    if (openedRef.current || !trainer) return;
+    openedRef.current = true;
+    say([trainer.intro]);
+    if (boast) say([`${trainer.name}: "${boast}"`]);
+    say([`They send out ${enemyTeam[0]?.displayName ?? "a creature"}!`]);
   }
 
   function labelForCreature(creature: Creature, playerActiveId: string): string {
@@ -417,7 +468,6 @@ export function BattleScreen({ navigation, route }: Props) {
       const announceLines = isPlayer
         ? playerLines
         : [`${foeLabel(enemy.displayName)} used ${getMove(enemyMoveId).name}.`];
-      pushLog([...announceLines, ...resultLinesFor(outcome, playerActiveId)]);
 
       function applyReaction() {
         if (outcome.hit && outcome.target) {
@@ -429,18 +479,35 @@ export function BattleScreen({ navigation, route }: Props) {
         setSnapshot(snapshotAfter);
       }
 
-      if (outcome.action.kind === "move") {
-        actingAnim.windUp();
-        actingAnim.lunge();
-        const move = getMove(outcome.action.moveId);
-        stageRef.current?.fireProjectile(move.type, isPlayer ? "toEnemy" : "toPlayer");
-        // Wait for the projectile to visually land before the target reacts / HP drains.
-        setTimeout(applyReaction, PROJECTILE_TRAVEL_MS);
-      } else {
-        applyReaction();
+      /** Shows what the move did, then waits for the player before moving on. */
+      function reportResult() {
+        const fainted = Boolean(outcome.target && outcome.target.currentHp <= 0);
+        const emphasis = fainted ? (isPlayer ? "good" : "bad") : "none";
+        say(resultLinesFor(outcome, playerActiveId), {
+          emphasis,
+          after: () => revealBeat(index + 1),
+        });
       }
 
-      setTimeout(() => revealBeat(index + 1), TURN_BEAT_DELAY_MS);
+      // Two beats per action: who is doing what, then — after the strike has actually played —
+      // what it did. The damage number is never on screen for less time than it takes to read.
+      say(announceLines, {
+        after: () => {
+          if (outcome.action.kind === "move") {
+            actingAnim.windUp();
+            actingAnim.lunge();
+            const move = getMove(outcome.action.moveId);
+            stageRef.current?.fireProjectile(move.type, isPlayer ? "toEnemy" : "toPlayer");
+            setTimeout(() => {
+              applyReaction();
+              reportResult();
+            }, Math.max(PROJECTILE_TRAVEL_MS, STRIKE_PLAY_MS));
+          } else {
+            applyReaction();
+            reportResult();
+          }
+        },
+      });
     }
 
     function finalizeTurn() {
@@ -458,7 +525,7 @@ export function BattleScreen({ navigation, route }: Props) {
         const nextIndex = enemyIndex + 1;
         if (isTrainerBattle && nextIndex < enemyTeam.length) {
           const nextFoe = enemyTeam[nextIndex];
-          pushLog([`${trainer!.name} sends out ${nextFoe.displayName}!`]);
+          say([`${trainer!.name} sends out ${nextFoe.displayName}!`]);
           setEnemyIndex(nextIndex);
           enemyPpRef.current = {};
           // Swap the new foe into the live context and restart the machine around it.
@@ -484,7 +551,7 @@ export function BattleScreen({ navigation, route }: Props) {
   }
 
   function switchTo(uid: string, { forced }: { forced: boolean }) {
-    if (!fsm) return;
+    if (!fsm || awaitingAcknowledgement()) return;
     const member = party.find((m) => m.uid === uid);
     if (!member || member.currentHp <= 0 || uid === activeUidRef.current) return;
 
@@ -496,14 +563,24 @@ export function BattleScreen({ navigation, route }: Props) {
 
     if (forced) {
       setForcedSwitchPending(false);
-      pushLog([`Go, ${member.displayName}!`]);
+      say([`Go, ${member.displayName}!`]);
     } else {
       setShowParty(false);
       runTurn({ kind: "switch", actorId: newCreature.id, targetPartyIndex: 0 }, [`Go, ${member.displayName}!`]);
     }
   }
 
+  /**
+   * True whenever the player owes the battle a tap. The message box covers the action area so
+   * a stray tap cannot get through, but the keyboard shortcuts talk to these handlers directly
+   * — so the rule belongs here rather than only in the layout.
+   */
+  function awaitingAcknowledgement(): boolean {
+    return popups.length > 0;
+  }
+
   function handleMove(moveId: string, moveName: string) {
+    if (awaitingAcknowledgement()) return;
     if (outcome || forcedSwitchPending || resolving || !fsm || fsm.getState() !== "ACTION_SELECT") return;
     if (!activeMember) return;
     // Scrap is the free last resort and is never rationed.
@@ -516,6 +593,7 @@ export function BattleScreen({ navigation, route }: Props) {
   }
 
   function handleInvokeCrux() {
+    if (awaitingAcknowledgement()) return;
     if (!fsm || !snapshot || outcome || forcedSwitchPending || resolving) return;
     if (fsm.getState() !== "ACTION_SELECT" || snapshot.playerCruxOnCooldown) return;
     const ctx = fsm.getContext();
@@ -526,19 +604,20 @@ export function BattleScreen({ navigation, route }: Props) {
   }
 
   function handleFlee() {
+    if (awaitingAcknowledgement()) return;
     if (!fsm || outcome || forcedSwitchPending || resolving || fsm.getState() !== "ACTION_SELECT") return;
     if (isTrainerBattle) {
-      pushLog(["There's no running from a challenge."]);
+      say(["There's no running from a challenge."]);
       return;
     }
     playerAnim.fleeOut();
-    pushLog(["You turned tail and ran!"]);
-    setOutcome("fled");
+    say(["You turned tail and ran!"], { after: () => setOutcome("fled") });
   }
 
   const applicableItems = usableItems().filter((item) => (inventory[item.id] ?? 0) > 0);
 
   function handleUseItem(itemId: string) {
+    if (awaitingAcknowledgement()) return;
     if (!fsm || !activeMember || outcome || forcedSwitchPending || resolving || fsm.getState() !== "ACTION_SELECT") return;
     const item = getItem(itemId);
     const ctx = fsm.getContext();
@@ -616,6 +695,7 @@ export function BattleScreen({ navigation, route }: Props) {
   const hasTraps = ownedTraps.length > 0;
 
   function handleCatch(trap: ItemData) {
+    if (awaitingAcknowledgement()) return;
     if (!fsm || outcome || forcedSwitchPending || resolving || fsm.getState() !== "ACTION_SELECT") return;
     if ((inventory[trap.id] ?? 0) <= 0) return;
     setShowTraps(false);
@@ -644,12 +724,15 @@ export function BattleScreen({ navigation, route }: Props) {
         const added = catchCreature(member);
         const money = currencyRewardForLevel(enemy.creature.level);
         earnCurrency(money);
-        pushLog([
-          `You threw a ${availableBall.name}!`,
-          added
-            ? `Gotcha! Wild ${enemy.displayName} was caught!`
-            : `Gotcha! ...but your party is full (6/6), so it couldn't be kept.`,
-        ]);
+        say(
+          [
+            `You threw a ${availableBall.name}!`,
+            added
+              ? `Gotcha! Wild ${enemy.displayName} was caught!`
+              : `Gotcha! ...but your party is full (6/6), so it couldn't be kept.`,
+          ],
+          { emphasis: added ? "good" : "bad" }
+        );
         const kinnieDropped = rollKinnieDrop();
         updatePartyMemberHp(ctx.playerActive.id, ctx.playerActive.currentHp);
         setRewards({ money, xp: 0, leveledUp: false, kinnieDropped });
@@ -665,7 +748,9 @@ export function BattleScreen({ navigation, route }: Props) {
     }, BALL_TRAVEL_MS);
   }
 
-  const actionsDisabled = !!outcome || forcedSwitchPending || resolving;
+  // Nothing is clickable while a message is waiting: the player is reading, not choosing.
+  const messageWaiting = popups.length > 0;
+  const actionsDisabled = !!outcome || forcedSwitchPending || resolving || messageWaiting;
 
   useKeyboardShortcuts({
     r: handleFlee,
@@ -996,16 +1081,29 @@ export function BattleScreen({ navigation, route }: Props) {
         </View>
       )}
 
+      {/* The battle's own voice. Everything queued here is read and dismissed before any
+          reveal or result modal is allowed to open, so a level-up never lands on top of the
+          damage line that caused it. */}
+      {messageWaiting && (
+        <BattleMessage
+          lines={popups[0].lines}
+          emphasis={popups[0].emphasis}
+          remaining={popups.length - 1}
+          onAdvance={advancePopup}
+        />
+      )}
+
       {/* Priority chain: an evolution reveal (if any) plays first, then the level-up stat
           comparison, then the battle result pop-up — each set together but shown one at a time,
           so a level-up (and any evolution it triggers) is never hidden behind the result. */}
-      {evolutionReveal ? (
-        <EvolutionModal data={evolutionReveal} onDismiss={() => setEvolutionReveal(null)} />
-      ) : (
-        levelUpReveal && <LevelUpModal data={levelUpReveal} onDismiss={handleDismissLevelUp} />
-      )}
+      {!messageWaiting &&
+        (evolutionReveal ? (
+          <EvolutionModal data={evolutionReveal} onDismiss={() => setEvolutionReveal(null)} />
+        ) : (
+          levelUpReveal && <LevelUpModal data={levelUpReveal} onDismiss={handleDismissLevelUp} />
+        ))}
 
-      {!evolutionReveal && !levelUpReveal && movePrompts.length > 0 && (
+      {!messageWaiting && !evolutionReveal && !levelUpReveal && movePrompts.length > 0 && (
         <MoveLearnModal
           prompt={movePrompts[0]}
           onReplace={(forgetMoveId) => {
@@ -1027,11 +1125,14 @@ export function BattleScreen({ navigation, route }: Props) {
           type={trainer.signatureType}
           trainerName={`${trainer.title} ${trainer.name}`}
           line={boast ?? "Let's see what you've got."}
-          onDone={() => setIntro(false)}
+          onDone={() => {
+            setIntro(false);
+            openTrainerBattle();
+          }}
         />
       )}
 
-      {completion && (
+      {completion && !messageWaiting && (
         <VictoryOverlay
           trainersBeaten={completion.trainersTotal}
           medalsWon={completion.gymsTotal}
@@ -1039,7 +1140,7 @@ export function BattleScreen({ navigation, route }: Props) {
         />
       )}
 
-      {outcome === "enemy" && (
+      {outcome === "enemy" && !messageWaiting && (
         <BlackoutOverlay
           zoneName={getZoneName(currentZoneId)}
           onContinue={() => {
@@ -1056,7 +1157,7 @@ export function BattleScreen({ navigation, route }: Props) {
         />
       )}
 
-      <Modal visible={!!outcome && outcome !== "enemy" && !levelUpReveal && !evolutionReveal && movePrompts.length === 0} transparent animationType="fade" onRequestClose={() => {}}>
+      <Modal visible={!!outcome && outcome !== "enemy" && !messageWaiting && !levelUpReveal && !evolutionReveal && movePrompts.length === 0} transparent animationType="fade" onRequestClose={() => {}}>
         <View style={styles.resultOverlay}>
           <Text style={styles.resultTitle}>
             {outcome === "player"
