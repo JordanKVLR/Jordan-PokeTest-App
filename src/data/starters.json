@@ -1,0 +1,113 @@
+{
+  "starters": [
+    {
+      "line": "Grass",
+      "stages": [
+        {
+          "id": "calfleaf",
+          "era": "neolithic",
+          "flavor": "A sturdy calf with clover sprouting along its spine, raised on the terraced fields around Żebbuġ. Farmers say a field it has slept in never fails.",
+          "name": "Calfleaf",
+          "stage": 1,
+          "types": ["Grass"],
+          "evolvesAtLevel": 16,
+          "baseStats": { "hp": 75, "atk": 92, "def": 81, "spatk": 55, "spdef": 76, "speed": 51 }
+        },
+        {
+          "id": "vinehorn",
+          "era": "neolithic",
+          "flavor": "Its horns have grown into gnarled carob and fig vines. After the winter storms it shoulders the fallen rubble walls back into place.",
+          "name": "Vinehorn",
+          "stage": 2,
+          "types": ["Grass"],
+          "evolvesAtLevel": 36,
+          "baseStats": { "hp": 93, "atk": 116, "def": 100, "spatk": 68, "spdef": 95, "speed": 63 }
+        },
+        {
+          "id": "mosstaur",
+          "era": "neolithic",
+          "flavor": "A great moss-backed bull as old as the temple stones. It charges with the weight of a megalith, and the builders of Ġgantija are said to have raised their walls on its strength.",
+          "name": "Moss-taur",
+          "stage": 3,
+          "types": ["Grass", "Ground"],
+          "evolvesAtLevel": null,
+          "baseStats": { "hp": 108, "atk": 135, "def": 117, "spatk": 80, "spdef": 111, "speed": 74 }
+        }
+      ],
+      "signatureMove": "Megalith Charge"
+    },
+    {
+      "line": "Fire",
+      "stages": [
+        {
+          "id": "pharawoof",
+          "era": "phoenician",
+          "flavor": "A rabbit-hound pup with an ember glowing at the tip of its tail. Like the island's own hounds, its ears blush red when it gets excited.",
+          "name": "Pharawoof",
+          "stage": 1,
+          "types": ["Fire"],
+          "evolvesAtLevel": 17,
+          "baseStats": { "hp": 61, "atk": 63, "def": 55, "spatk": 99, "spdef": 74, "speed": 78 }
+        },
+        {
+          "id": "infernux",
+          "era": "phoenician",
+          "flavor": "Its ears burn with a steady flame that sees further than its eyes. Phoenician traders believed it could smell a storm three days before it broke.",
+          "name": "Infernux",
+          "stage": 2,
+          "types": ["Fire", "Psychic"],
+          "evolvesAtLevel": 34,
+          "baseStats": { "hp": 76, "atk": 78, "def": 68, "spatk": 122, "spdef": 93, "speed": 98 }
+        },
+        {
+          "id": "pyrollis",
+          "era": "phoenician",
+          "flavor": "A tall, gilded hound that reads what is coming in the flicker of its own fire. The oracles at Tas-Silġ kept one beside the altar.",
+          "name": "Pyrollis",
+          "stage": 3,
+          "types": ["Fire", "Psychic"],
+          "evolvesAtLevel": null,
+          "baseStats": { "hp": 89, "atk": 91, "def": 80, "spatk": 143, "spdef": 108, "speed": 114 }
+        }
+      ],
+      "signatureMove": "Oracle Flame"
+    },
+    {
+      "line": "Water",
+      "stages": [
+        {
+          "id": "duckling",
+          "era": "knights",
+          "flavor": "A round little duck that paddles the saltpans at dawn, nibbling brine shrimp and scolding the fishermen.",
+          "name": "Duckling",
+          "stage": 1,
+          "types": ["Water"],
+          "evolvesAtLevel": 15,
+          "baseStats": { "hp": 72, "atk": 76, "def": 86, "spatk": 64, "spdef": 80, "speed": 52 }
+        },
+        {
+          "id": "platyflow",
+          "era": "knights",
+          "flavor": "A broad-billed swimmer that rides the harbour swell like a painted luzzu, steering with its flat tail.",
+          "name": "Platyflow",
+          "stage": 2,
+          "types": ["Water"],
+          "evolvesAtLevel": 33,
+          "baseStats": { "hp": 89, "atk": 94, "def": 110, "spatk": 79, "spdef": 99, "speed": 64 }
+        },
+        {
+          "id": "marinedge",
+          "era": "knights",
+          "flavor": "Its feathers have hardened into a plated hull with a ram at the bill, like the galleys of the Knights. It keeps watch over the mouth of the Grand Harbour.",
+          "name": "Marinedge",
+          "stage": 3,
+          "types": ["Water", "Steel"],
+          "evolvesAtLevel": null,
+          "baseStats": { "hp": 104, "atk": 110, "def": 127, "spatk": 93, "spdef": 116, "speed": 75 }
+        }
+      ],
+      "signatureMove": "Hull Ram",
+      "rideAbility": "surf_and_submerge"
+    }
+  ]
+}

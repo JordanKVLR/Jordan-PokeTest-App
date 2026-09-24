@@ -1,0 +1,121 @@
+{
+  "legendaries": [
+    {
+      "id": "aegilord",
+      "name": "Aegilord",
+      "types": [
+        "Steel"
+      ],
+      "aesthetic": "Knight-armor / Maltese cross motif",
+      "baseStats": {
+        "hp": 100,
+        "atk": 150,
+        "def": 120,
+        "spatk": 70,
+        "spdef": 100,
+        "speed": 90
+      },
+      "signatureMove": "Cross of Valour",
+      "storyFlagRequired": "chivalry_trial_complete",
+      "evolvesAtLevel": 55,
+      "evolvesInto": "aegilordan"
+    },
+    {
+      "id": "aegilordan",
+      "name": "Aegilordan",
+      "types": [
+        "Steel",
+        "Fighting"
+      ],
+      "aesthetic": "Knight-armor / Maltese cross motif, visor raised",
+      "baseStats": {
+        "hp": 134,
+        "atk": 204,
+        "def": 160,
+        "spatk": 95,
+        "spdef": 133,
+        "speed": 115
+      },
+      "signatureMove": "Cross of Valour",
+      "storyFlagRequired": "chivalry_trial_complete"
+    },
+    {
+      "id": "megalithos",
+      "name": "Megalithos",
+      "types": [
+        "Rock"
+      ],
+      "aesthetic": "Floating megalithic temple stone, glyph-etched",
+      "baseStats": {
+        "hp": 110,
+        "atk": 90,
+        "def": 130,
+        "spatk": 130,
+        "spdef": 100,
+        "speed": 40
+      },
+      "signatureMove": "Solstice Beam",
+      "storyFlagRequired": "antiquity_trial_complete",
+      "evolvesAtLevel": 55,
+      "evolvesInto": "megalithron"
+    },
+    {
+      "id": "megalithron",
+      "name": "Megalithron",
+      "types": [
+        "Rock",
+        "Psychic"
+      ],
+      "aesthetic": "Trilithon risen whole, solstice-aligned",
+      "baseStats": {
+        "hp": 147,
+        "atk": 122,
+        "def": 173,
+        "spatk": 177,
+        "spdef": 133,
+        "speed": 51
+      },
+      "signatureMove": "Solstice Alignment",
+      "storyFlagRequired": "temple_trial_complete"
+    },
+    {
+      "id": "siroccus",
+      "name": "Siroccus",
+      "types": [
+        "Flying"
+      ],
+      "aesthetic": "Sandstorm dragon, southern-wind motif",
+      "baseStats": {
+        "hp": 95,
+        "atk": 110,
+        "def": 85,
+        "spatk": 110,
+        "spdef": 85,
+        "speed": 120
+      },
+      "signatureMove": "Gregale Howl",
+      "storyFlagRequired": "both_trials_complete",
+      "evolvesAtLevel": 55,
+      "evolvesInto": "siroccalis"
+    },
+    {
+      "id": "siroccalis",
+      "name": "Siroccalis",
+      "types": [
+        "Flying",
+        "Dragon"
+      ],
+      "aesthetic": "The south wind given a spine",
+      "baseStats": {
+        "hp": 127,
+        "atk": 150,
+        "def": 113,
+        "spatk": 150,
+        "spdef": 113,
+        "speed": 154
+      },
+      "signatureMove": "Sirocco Judgement",
+      "storyFlagRequired": "storm_trial_complete"
+    }
+  ]
+}
