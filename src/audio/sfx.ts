@@ -1,4 +1,4 @@
-import { audio, playNote, sfxEnabled } from "./engine";
+import { audio, playNote, quietly, sfxEnabled } from "./engine";
 import { noteToMidi } from "./notes";
 import type { TypeName } from "../data/schemas";
 
@@ -43,6 +43,13 @@ function trimmed(amount: number, build: () => void) {
   } finally {
     trim = 1;
   }
+}
+
+/** Wraps every effect in a set so no sound can throw into the game. */
+function guardAll<T extends Record<string, (...args: never[]) => unknown>>(effects: T): T {
+  const safe = {} as Record<string, unknown>;
+  for (const [name, fn] of Object.entries(effects)) safe[name] = quietly(fn as (...args: unknown[]) => unknown);
+  return safe as T;
 }
 
 function out(pan = 0, wet = 0.15): { context: AudioContext; node: AudioNode; now: number } | null {
@@ -134,7 +141,7 @@ function notes(instrument: Parameters<typeof playNote>[0], names: string[], gap:
 
 // ─── Interface ───────────────────────────────────────────────────────────────────────────────
 
-export const ui = {
+export const ui = guardAll({
   /** Any button. Short and woody, so a hundred of them never grate. */
   tap: () => {
     tone({ type: "triangle", freq: 1250, to: 900, dur: 0.05, gain: 0.12 }, 0);
@@ -159,11 +166,11 @@ export const ui = {
   },
   /** Picking something up, choosing a starter: a warm little rise. */
   confirm: () => notes("marimba", ["C5", "G5", "C6"], 0.06, 0.2, 0.25),
-};
+});
 
 // ─── Overworld ───────────────────────────────────────────────────────────────────────────────
 
-export const world = {
+export const world = guardAll({
   /** Walking into a wall or a tree. */
   bump: () => tone({ type: "sine", freq: 110, to: 70, dur: 0.1, gain: 0.25 }, 0),
   /** The grass rustles and something leaps out. */
@@ -180,7 +187,7 @@ export const world = {
   /** Setting foot in a stage for the first time. */
   newStage: () => notes("bell", ["G5", "C6", "E6", "G6"], 0.09, 0.4, 0.2, 0.4),
   step: () => noise({ filter: "lowpass", freq: 600, dur: 0.05, gain: 0.05 }, 0),
-};
+});
 
 // ─── Battle ──────────────────────────────────────────────────────────────────────────────────
 
@@ -283,7 +290,7 @@ const ATTACK_TRIM: Partial<Record<TypeName, number>> = {
   Fighting: 0.65,
 };
 
-export const battle = {
+export const battle = guardAll({
   /** A move being thrown. Status moves shimmer instead of striking. */
   attack: (type: TypeName, category: "physical" | "special" | "status", fromPlayer: boolean) => {
     const pan = fromPlayer ? 0.3 : -0.3;
@@ -368,4 +375,4 @@ export const battle = {
     noise({ filter: "bandpass", freq: 300, to: 5000, q: 1, dur: 0.6, gain: 0.2, attack: 0.3 }, 0.3);
     setTimeout(() => trimmed(ATTACK_TRIM[type] ?? 1, () => ATTACKS[type](0)), 450);
   },
-};
+});

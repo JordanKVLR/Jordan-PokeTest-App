@@ -13,6 +13,25 @@ import { TRACKS, trackLength, type DrumVoice, type InstrumentId, type Track, typ
 
 type Ctx = AudioContext;
 
+let warned = false;
+/**
+ * Sound must never be able to break the game: a browser that dislikes some corner of Web Audio
+ * gets silence, not a crashed page. Every way into the engine goes through this.
+ */
+export function quietly<A extends unknown[], R>(fn: (...args: A) => R): (...args: A) => R | undefined {
+  return (...args: A) => {
+    try {
+      return fn(...args);
+    } catch (error) {
+      if (!warned) {
+        warned = true;
+        console.warn("Audio problem; carrying on without it:", error);
+      }
+      return undefined;
+    }
+  };
+}
+
 interface Buses {
   master: GainNode;
   music: GainNode;
@@ -62,7 +81,7 @@ function makeImpulse(context: Ctx, seconds = 2.2): AudioBuffer {
 }
 
 /** Creates the context on the first gesture and plays whatever was asked for before it. */
-export function unlockAudio(): void {
+function unlockAudioUnsafe(): void {
   if (!audioSupported()) return;
   if (!ctx) {
     const Context = contextClass()!;
@@ -93,7 +112,7 @@ export function unlockAudio(): void {
 }
 
 /** Pauses everything while the tab is hidden; picks up where it was on return. */
-export function setAudioSuspended(suspended: boolean): void {
+function setAudioSuspendedUnsafe(suspended: boolean): void {
   if (!ctx) return;
   if (suspended) void ctx.suspend();
   else void ctx.resume();
@@ -106,7 +125,7 @@ function applyVolumes() {
   buses.sfx.gain.setTargetAtTime(sfxVolume * sfxVolume, ctx.currentTime, 0.05);
 }
 
-export function setVolumes(music: number, sfx: number): void {
+function setVolumesUnsafe(music: number, sfx: number): void {
   const wasSilent = musicVolume === 0;
   musicVolume = music;
   sfxVolume = sfx;
@@ -494,6 +513,9 @@ export function playDrum(voice: DrumVoice, time: number, level: number, destinat
 
 // ─── Sequencer ───────────────────────────────────────────────────────────────────────────────
 
+const safeNote = quietly(playNote);
+const safeDrum = quietly(playDrum);
+
 const LOOKAHEAD_S = 0.14;
 const TICK_MS = 25;
 
@@ -585,13 +607,13 @@ class TrackPlayer {
       for (const part of this.parts) {
         for (const event of part.byStep.get(this.step) ?? []) {
           for (const midi of event.midi) {
-            playNote(part.instrument, midi, time, event.length * this.stepSeconds, part.level, part.pan, this.output);
+            safeNote(part.instrument, midi, time, event.length * this.stepSeconds, part.level, part.pan, this.output);
           }
         }
       }
       for (const drum of this.track.drums ?? []) {
         const hit = drum.pattern[this.step % drum.pattern.length];
-        if (hit === "x" || hit === "X") playDrum(drum.voice, time, drum.gain * (hit === "X" ? 1.4 : 1), this.output);
+        if (hit === "x" || hit === "X") safeDrum(drum.voice, time, drum.gain * (hit === "X" ? 1.4 : 1), this.output);
       }
       this.step += 1;
       this.nextTime += this.stepSeconds;
@@ -616,7 +638,7 @@ function startTrack(id: TrackId, fade = 0.8) {
  * The background music a screen wants. Asking for what is already playing changes nothing, so
  * menus over the map keep the map's tune running; a different piece crossfades in.
  */
-export function requestMusic(id: TrackId | null, fade = 0.8): void {
+function requestMusicUnsafe(id: TrackId | null, fade = 0.8): void {
   if (id === wantedTrack && (current?.id === id || !audio())) return;
   wantedTrack = id;
   if (!audio()) return;
@@ -633,7 +655,7 @@ export function requestMusic(id: TrackId | null, fade = 0.8): void {
  * or, with `then: "stop"`, stays down (the fight is over; the next screen chooses what's next).
  * Jingles never cut each other off: a level-up arriving mid-fanfare waits its turn.
  */
-export function playJingle(id: TrackId, options: { then?: "resume" | "stop" } = {}): void {
+function playJingleUnsafe(id: TrackId, options: { then?: "resume" | "stop" } = {}): void {
   const live = audio();
   if (!live || musicVolume === 0) return;
   if (jingle) {
@@ -673,3 +695,9 @@ export function nowPlaying(): { music: TrackId | null; wanted: TrackId | null } 
 if (typeof globalThis !== "undefined") {
   (globalThis as unknown as { __maltaAudio?: unknown }).__maltaAudio = { nowPlaying, audio, playNote, playDrum };
 }
+
+export const unlockAudio = quietly(unlockAudioUnsafe);
+export const setAudioSuspended = quietly(setAudioSuspendedUnsafe);
+export const setVolumes = quietly(setVolumesUnsafe);
+export const requestMusic = quietly(requestMusicUnsafe);
+export const playJingle = quietly(playJingleUnsafe);
