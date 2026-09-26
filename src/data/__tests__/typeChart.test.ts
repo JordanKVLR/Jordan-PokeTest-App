@@ -88,6 +88,20 @@ describe("type chart", () => {
     expect(rosterReach("Ice")).toBeGreaterThan(ROSTER.length * 0.25);
   });
 
+  it("keeps the matchups the game's design calls for", () => {
+    // Asked for by name, and not to be traded away when the chart is rebalanced. An earlier
+    // Ice rebalance quietly dropped Rock's resistance to Normal to compensate elsewhere; this
+    // exists so that can't happen silently again.
+    const resists = (defender: TypeName, attacker: TypeName) => matrix[attacker][defender] < 1;
+    // Hard things shrug off plain blows and each other: stone against stone, stone against a fist of nothing special.
+    expect(resists("Rock", "Normal")).toBe(true);
+    expect(resists("Rock", "Rock")).toBe(true);
+    expect(resists("Steel", "Normal")).toBe(true);
+    // Ice stands up to ordinary blows and to plants.
+    expect(resists("Ice", "Normal")).toBe(true);
+    expect(resists("Ice", "Grass")).toBe(true);
+  });
+
   it("keeps the eight immunities the compatibility rules are derived from", () => {
     const immunities = [
       ["Ghost", "Normal"], ["Normal", "Ghost"], ["Psychic", "Dark"], ["Electric", "Ground"],
