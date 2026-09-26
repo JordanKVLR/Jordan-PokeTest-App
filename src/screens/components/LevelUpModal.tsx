@@ -4,6 +4,8 @@ import { CreatureAvatar } from "./CreatureAvatar";
 import { TypeBadge } from "./TypeBadge";
 import { colors } from "../theme";
 import { useI18n } from "../../i18n";
+import { useEffect } from "react";
+import { playJingle } from "../../audio/engine";
 
 export interface LevelUpRevealData {
   speciesId: string;
@@ -23,6 +25,7 @@ const STAT_KEYS: (keyof StatBlock)[] = ["hp", "atk", "def", "spatk", "spdef", "s
  * dismiss, matching the mainline games' level-up screen convention.
  */
 export function LevelUpModal({ data, onDismiss }: { data: LevelUpRevealData; onDismiss: () => void }) {
+  useEffect(() => playJingle("levelUp"), []);
   const { t, c } = useI18n();
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onDismiss}>

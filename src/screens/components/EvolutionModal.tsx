@@ -5,6 +5,7 @@ import { CreatureAvatar } from "./CreatureAvatar";
 import { TypeBadge } from "./TypeBadge";
 import { colors } from "../theme";
 import { useI18n } from "../../i18n";
+import { useMusicWhileMounted } from "../../audio/useMusicWhileMounted";
 
 export type EvolutionRevealData = EvolutionReveal;
 
@@ -27,6 +28,7 @@ type Phase = "intro" | "flashing" | "revealed";
  * transformation always gets seen rather than being skippable mid-flash.
  */
 export function EvolutionModal({ data, onDismiss }: { data: EvolutionRevealData; onDismiss: () => void }) {
+  useMusicWhileMounted("evolution");
   const [phase, setPhase] = useState<Phase>("intro");
   const [showNewForm, setShowNewForm] = useState(false);
   const flashOpacity = useRef(new Animated.Value(0)).current;

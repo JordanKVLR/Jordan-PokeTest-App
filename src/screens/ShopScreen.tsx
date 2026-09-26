@@ -9,6 +9,7 @@ import { HoverTip } from "./components/HoverTip";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { colors } from "./theme";
 import { useI18n } from "../i18n";
+import { ui } from "../audio/sfx";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Shop">;
 
@@ -26,6 +27,7 @@ export function ShopScreen({ navigation }: Props) {
   function buy(itemId: string, price: number) {
     if (!spendCurrency(price)) return;
     addItem(itemId, 1);
+    ui.coin();
   }
 
   return (

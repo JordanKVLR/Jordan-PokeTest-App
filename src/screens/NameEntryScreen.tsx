@@ -7,10 +7,12 @@ import { PrimaryButton } from "./components/PrimaryButton";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { colors } from "./theme";
 import { useI18n } from "../i18n";
+import { useMusic } from "../audio/useMusic";
 
 type Props = NativeStackScreenProps<RootStackParamList, "NameEntry">;
 
 export function NameEntryScreen({ navigation }: Props) {
+  useMusic("title");
   const setPlayerName = useGameStore((s) => s.setPlayerName);
   const [name, setName] = useState("");
   const { t } = useI18n();

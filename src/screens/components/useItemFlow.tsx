@@ -12,6 +12,7 @@ import { LevelUpModal, type LevelUpRevealData } from "./LevelUpModal";
 import { EvolutionModal, type EvolutionRevealData } from "./EvolutionModal";
 import { MoveLearnModal, type MoveLearnPrompt } from "./MoveLearnModal";
 import { colors } from "../theme";
+import { battle as battleSfx } from "../../audio/sfx";
 
 /**
  * Using a Bag item on a party member, from wherever the player happens to be: the Bag, the
@@ -58,6 +59,7 @@ export function useItemFlow() {
     if (!result.applied) return;
 
     if (result.effect === "heal") {
+      battleSfx.heal();
       setFeedback(t("detail.healed", { name: member.displayName, item: itemName, amount: result.healedAmount }));
       return;
     }

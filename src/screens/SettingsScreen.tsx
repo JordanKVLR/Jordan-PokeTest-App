@@ -84,6 +84,16 @@ export function SettingsScreen({ navigation }: Props) {
                 )}
               </View>
             ))}
+            {section.title === "settings.section.sound" && (
+              <Pressable
+                testID="open-music-room"
+                onPress={() => navigation.navigate("MusicRoom")}
+                style={({ pressed }) => [styles.row, styles.linkRow, pressed && styles.segmentPressed]}
+              >
+                <Text style={styles.label}>{t("musicRoom.open")}</Text>
+                <Text style={styles.help}>{t("musicRoom.openHelp")}</Text>
+              </Pressable>
+            )}
           </View>
         ))}
 
@@ -145,6 +155,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 14,
     gap: 10,
+  },
+  linkRow: {
+    gap: 3,
   },
   rowText: {
     gap: 3,

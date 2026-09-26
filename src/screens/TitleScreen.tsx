@@ -7,10 +7,12 @@ import { ScreenBackground } from "./components/ScreenBackground";
 import { colors } from "./theme";
 import { TitleLandscape } from "../art/titleLandscape";
 import { useI18n } from "../i18n";
+import { useMusic } from "../audio/useMusic";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Title">;
 
 export function TitleScreen({ navigation }: Props) {
+  useMusic("title");
   const hasHydrated = useGameStore((s) => s.hasHydrated);
   const hasSave = useGameStore((s) => s.party.length > 0);
   const currentZoneId = useGameStore((s) => s.currentZoneId);

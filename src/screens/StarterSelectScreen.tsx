@@ -9,6 +9,7 @@ import { TypeBadge } from "./components/TypeBadge";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { colors } from "./theme";
 import { useI18n } from "../i18n";
+import { useMusic } from "../audio/useMusic";
 
 type Props = NativeStackScreenProps<RootStackParamList, "StarterSelect">;
 
@@ -16,6 +17,7 @@ const starters = StartersFileSchema.parse(startersData).starters;
 
 /** Reveal screen: the quiz already picked selectedLine, this just confirms it. */
 export function StarterSelectScreen({ navigation }: Props) {
+  useMusic("title");
   const playerName = useGameStore((s) => s.playerName);
   const selectedLine = useGameStore((s) => s.selectedLine);
   const party = useGameStore((s) => s.party);

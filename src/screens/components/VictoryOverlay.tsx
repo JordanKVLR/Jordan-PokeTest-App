@@ -3,6 +3,7 @@ import { Animated, Easing, Modal, Pressable, StyleSheet, Text, View } from "reac
 import { colors } from "../theme";
 import { useTapAnywhere } from "./useTapAnywhere";
 import { useI18n } from "../../i18n";
+import { useMusicWhileMounted } from "../../audio/useMusicWhileMounted";
 
 /**
  * The end of the run. Shown once — the moment the last trainer on the islands goes down and
@@ -23,6 +24,7 @@ export function VictoryOverlay({
 }) {
   const { t } = useI18n();
   const tapAnywhere = useTapAnywhere(onContinue);
+  useMusicWhileMounted("finale");
   const rise = useRef(new Animated.Value(0)).current;
   const textFade = useRef(new Animated.Value(0)).current;
 

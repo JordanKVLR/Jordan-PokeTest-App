@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors } from "../theme";
 import { useI18n } from "../../i18n";
+import { ui } from "../../audio/sfx";
 
 /**
  * The battle's dialogue box: one beat of the fight.
@@ -46,6 +47,14 @@ export function BattleMessage({
     doneRef.current = true;
     onAdvanceRef.current();
   };
+
+  // A soft tick as each message arrives; a brighter one for a medal, a catch, a faint.
+  useEffect(() => {
+    if (emphasis === "good") ui.coin();
+    else ui.message();
+    // Once per popup — the component is keyed by popup id.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (autoAdvanceMs === null) return;

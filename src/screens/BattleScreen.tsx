@@ -39,6 +39,10 @@ import { EvolutionModal, type EvolutionRevealData } from "./components/Evolution
 import { MoveLearnModal, type MoveLearnPrompt } from "./components/MoveLearnModal";
 import { BlackoutOverlay } from "./components/BlackoutOverlay";
 import { useTapAnywhere } from "./components/useTapAnywhere";
+import { useMusic } from "../audio/useMusic";
+import { battleTrack } from "../audio/choose";
+import { playJingle } from "../audio/engine";
+import { battle as battleSfx } from "../audio/sfx";
 import { VictoryOverlay } from "./components/VictoryOverlay";
 import { ElementalTransition } from "./components/ElementalTransition";
 import { BattleMessage } from "./components/BattleMessage";
@@ -172,6 +176,7 @@ export function BattleScreen({ navigation, route }: Props) {
     [biome, selectedLine, currentZoneId]
   );
   const trainer = route.params.trainerId ? getTrainer(route.params.trainerId) : undefined;
+  useMusic(battleTrack(trainer));
   const isTrainerBattle = trainer !== undefined;
 
   /** A trainer sends out their whole party in order; the wild path is a single creature. */
@@ -347,6 +352,9 @@ export function BattleScreen({ navigation, route }: Props) {
 
   function finishBattle(result: "player" | "enemy", finalCtx: BattleContext) {
     setOutcome(result);
+    // The fight's music stops for its ending; the map picks its own tune back up on return.
+    if (result === "enemy") playJingle("blackout", { then: "stop" });
+    else playJingle(trainer?.medalId ? "medal" : "victory", { then: "stop" });
     recordBattleResult(result === "player");
     if (result !== "player") return;
 
@@ -524,6 +532,7 @@ export function BattleScreen({ navigation, route }: Props) {
         : [t("battle.foeUsed", { name: foeLabel(enemy.displayName), move: c.move(enemyMoveId) })];
 
       function applyReaction() {
+        playImpact();
         if (outcome.hit && outcome.target) {
           if (outcome.damage > 0) {
             reactingAnim.hit(outcome.damage >= outcome.target.stats.hp * BIG_HIT_FRACTION ? "big" : "small");
@@ -531,6 +540,24 @@ export function BattleScreen({ navigation, route }: Props) {
           if (outcome.target.currentHp <= 0) reactingAnim.faint();
         }
         setSnapshot(snapshotAfter);
+      }
+
+      /** The sound of the strike landing — or not — and of whatever it changed. */
+      function playImpact() {
+        if (outcome.action.kind !== "move" || !outcome.target) return;
+        const move = getMove(outcome.action.moveId);
+        if (!outcome.hit) {
+          battleSfx.miss(isPlayer);
+          return;
+        }
+        if (move.category !== "status") {
+          const multiplier = getTypeMultiplier(move.type, outcome.target.types);
+          const effect = multiplier === 0 ? "none" : multiplier > 1 ? "super" : multiplier < 1 ? "weak" : "normal";
+          battleSfx.hit(effect, outcome.crit, !isPlayer);
+        }
+        const change = outcome.statChanges?.find((c) => c.stages !== 0);
+        if (change) setTimeout(() => (change.stages > 0 ? battleSfx.statUp() : battleSfx.statDown()), 180);
+        if (outcome.target.currentHp <= 0) setTimeout(() => battleSfx.faint(!isPlayer), 260);
       }
 
       /** Shows what the move did, then waits for the player before moving on. */
@@ -557,6 +584,7 @@ export function BattleScreen({ navigation, route }: Props) {
             actingAnim.windUp();
             actingAnim.lunge();
             const move = getMove(outcome.action.moveId);
+            battleSfx.attack(move.type, move.category, isPlayer);
             stageRef.current?.fireProjectile(move.type, isPlayer ? "toEnemy" : "toPlayer");
             setTimeout(() => {
               applyReaction();
@@ -621,6 +649,7 @@ export function BattleScreen({ navigation, route }: Props) {
     setSnapshot(snapshotFrom(fsm.getContext()));
     playerAnim.reset();
 
+    battleSfx.switchIn();
     if (forced) {
       setForcedSwitchPending(false);
       say([t("battle.go", { name: member.displayName })], "action");
@@ -660,6 +689,7 @@ export function BattleScreen({ navigation, route }: Props) {
     const name = activeMember?.displayName ?? t("battle.yourCreature");
     playerAnim.cruxGlow();
     stageRef.current?.cruxBurst();
+    battleSfx.crux();
     runTurn({ kind: "invoke_crux", actorId: ctx.playerActive.id }, [t("battle.crux", { name })]);
   }
 
@@ -671,6 +701,7 @@ export function BattleScreen({ navigation, route }: Props) {
       return;
     }
     playerAnim.fleeOut();
+    battleSfx.flee();
     say([t("battle.ran")], "info", { after: () => setOutcome("fled") });
   }
 
@@ -694,6 +725,7 @@ export function BattleScreen({ navigation, route }: Props) {
       setShowItems(false);
       playerAnim.heal();
       stageRef.current?.itemFlash("#7ddba0");
+      battleSfx.heal();
 
       runTurn({ kind: "item", actorId: ctx.playerActive.id, itemId }, [
         t("battle.usedItem", { item: c.item(item.id) }),
@@ -773,13 +805,20 @@ export function BattleScreen({ navigation, route }: Props) {
     const availableBall = trap;
     setResolving(true);
     stageRef.current?.throwBall();
+    battleSfx.throwTrap();
 
     // Wait for the ball to visually arrive before it wobbles and the outcome plays out.
     setTimeout(() => {
       enemyAnim.wobble();
       setResolving(false);
+      battleSfx.trapShut();
+      for (let i = 0; i < Math.max(1, result.shakesPassed); i++) setTimeout(battleSfx.wobble, 250 + i * 300);
 
       if (result.caught) {
+        setTimeout(() => {
+          battleSfx.caughtClick();
+          playJingle("caught", { then: "stop" });
+        }, 250 + Math.max(1, result.shakesPassed) * 300);
         const member = partyMemberFromParticipant(enemy, "wild");
         const added = catchCreature(member);
         const money = currencyRewardForLevel(enemy.creature.level);
@@ -799,6 +838,7 @@ export function BattleScreen({ navigation, route }: Props) {
         return;
       }
 
+      setTimeout(battleSfx.breakFree, 250 + Math.max(1, result.shakesPassed) * 300);
       runTurn({ kind: "item", actorId: ctx.playerActive.id, itemId: availableBall.id }, [
         plural(result.shakesPassed, "battle.brokeFreeOne", "battle.brokeFreeMany", { item: c.item(availableBall.id) }),
       ]);

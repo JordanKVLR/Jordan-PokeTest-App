@@ -26,6 +26,7 @@ export type TextSpeed = "slow" | "normal" | "fast";
 export type TrainerIntros = "full" | "brief";
 export type EncounterRate = "fewer" | "normal" | "more";
 export type TextSize = "normal" | "large";
+export type Volume = "off" | "low" | "medium" | "high";
 
 export interface Settings {
   language: Language;
@@ -39,6 +40,8 @@ export interface Settings {
   showFollower: boolean;
   reducedMotion: boolean;
   textSize: TextSize;
+  musicVolume: Volume;
+  sfxVolume: Volume;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -53,7 +56,16 @@ export const DEFAULT_SETTINGS: Settings = {
   showFollower: true,
   reducedMotion: false,
   textSize: "normal",
+  musicVolume: "medium",
+  sfxVolume: "medium",
 };
+
+const VOLUME_LEVEL: Record<Volume, number> = { off: 0, low: 0.4, medium: 0.7, high: 1 };
+
+/** A volume setting as a 0–1 level for the audio engine. */
+export function volumeLevel(volume: Volume): number {
+  return VOLUME_LEVEL[volume] ?? VOLUME_LEVEL.medium;
+}
 
 /**
  * What a battle message is, which decides whether it can move on by itself.

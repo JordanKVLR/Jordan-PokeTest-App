@@ -6,6 +6,7 @@ import { TYPE_COLORS, shade } from "../theme";
 import { useI18n } from "../../i18n";
 import { useSettings, currentSettings } from "../../state/settingsStore";
 import { trainerIntroHoldMs } from "../../game/settings";
+import { battle as battleSfx } from "../../audio/sfx";
 
 /**
  * The wipe that plays into a trainer battle, themed to the type that trainer fights under.
@@ -84,6 +85,7 @@ export function ElementalTransition({
   };
 
   useEffect(() => {
+    battleSfx.transition(type);
     // With reduced motion the particle field fades straight in rather than sweeping across.
     const wipe = reducedMotion ? 200 : DURATION;
     Animated.sequence([

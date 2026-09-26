@@ -35,6 +35,13 @@ export const SETTINGS_SECTIONS: { title: StringKey; rows: Row[] }[] = [
     rows: [{ kind: "choice", key: "language", options: ["en", "mt"] }],
   },
   {
+    title: "settings.section.sound",
+    rows: [
+      { kind: "choice", key: "musicVolume", options: ["off", "low", "medium", "high"] },
+      { kind: "choice", key: "sfxVolume", options: ["off", "low", "medium", "high"] },
+    ],
+  },
+  {
     title: "settings.section.controls",
     rows: [
       { kind: "choice", key: "controlMode", options: ["joystick", "dpad"] },

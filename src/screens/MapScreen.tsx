@@ -24,6 +24,10 @@ import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { useMapLayout } from "./components/useMapLayout";
 import { useSettings } from "../state/settingsStore";
 import { encounterChance, type ControlSide } from "../game/settings";
+import { useMusic } from "../audio/useMusic";
+import { mapTrack } from "../audio/choose";
+import { playJingle } from "../audio/engine";
+import { ui, world as worldSfx } from "../audio/sfx";
 import { useI18n, currentI18n } from "../i18n";
 import { colors, world } from "./theme";
 
@@ -132,6 +136,19 @@ export function MapScreen({ navigation, route }: Props) {
   const trainers = trainersForZone(map.zoneId);
   const stage = getStage(map.zoneId);
   const zoneBiome = stage?.biomes[0] ?? "grass";
+  useMusic(mapTrack(stage));
+
+  // A first visit announces itself with a little bell phrase as the briefing unrolls.
+  useEffect(() => {
+    if (briefing.length === 0) return;
+    const timer = setTimeout(() => {
+      worldSfx.newStage();
+      ui.scroll();
+    }, 250);
+    return () => clearTimeout(timer);
+    // Only on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
@@ -174,6 +191,7 @@ export function MapScreen({ navigation, route }: Props) {
     const next = { row: position.row + dRow, col: position.col + dCol };
 
     if (!isWalkable(map, next.row, next.col)) {
+      worldSfx.bump();
       setToast(t("map.treesBlock"));
       return;
     }
@@ -182,6 +200,7 @@ export function MapScreen({ navigation, route }: Props) {
     // walk through them.
     const blocker = trainerAt(map.zoneId, next.row, next.col);
     if (blocker && !defeatedTrainerIds.includes(blocker.id)) {
+      worldSfx.spotted();
       setBusy(true);
       const flashes = flashSequence();
       Animated.sequence(flashes).start(() => {
@@ -203,6 +222,7 @@ export function MapScreen({ navigation, route }: Props) {
     }).start();
     setPosition(next);
     setBusy(true);
+    worldSfx.step();
     Animated.timing(anim, {
       toValue: { x: next.col, y: next.row },
       duration: 150,
@@ -212,6 +232,7 @@ export function MapScreen({ navigation, route }: Props) {
         const gate = medalRequiredToEnter(map.exitTo);
         if (gate && !medals.includes(gate.medalId)) {
           const medal = c.medal(gate.medalId);
+          ui.blocked();
           setNotice({
             id: "gate",
             kicker: t("map.gate.kicker"),
@@ -242,6 +263,8 @@ export function MapScreen({ navigation, route }: Props) {
 
       if (isHealTile(map, next.row, next.col)) {
         const healedCount = healFaintedPartyMembers();
+        if (healedCount > 0) playJingle("heal");
+        else ui.message();
         setNotice({
           id: "chapel",
           kicker: t("map.chapel.kicker"),
@@ -269,6 +292,7 @@ export function MapScreen({ navigation, route }: Props) {
       if (biome && Math.random() < encounterChance(ENCOUNTER_CHANCE, useSettings.getState().encounterRate)) {
         // Screen-flash transition before cutting to Battle — busy stays true
         // for the whole sequence so the player can't walk away mid-flash.
+        worldSfx.encounter();
         const flashAnimations = flashSequence();
         Animated.sequence(flashAnimations).start(() => {
           encounterFlash.setValue(0);

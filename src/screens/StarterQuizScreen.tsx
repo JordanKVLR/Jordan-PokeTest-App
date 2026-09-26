@@ -8,10 +8,12 @@ import type { StarterLineName } from "../game/creatureFactory";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { colors } from "./theme";
 import { useI18n } from "../i18n";
+import { useMusic } from "../audio/useMusic";
 
 type Props = NativeStackScreenProps<RootStackParamList, "StarterQuiz">;
 
 export function StarterQuizScreen({ navigation }: Props) {
+  useMusic("title");
   const selectStarter = useGameStore((s) => s.selectStarter);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<StarterLineName[]>([]);

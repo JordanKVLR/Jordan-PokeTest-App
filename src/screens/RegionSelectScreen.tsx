@@ -5,6 +5,7 @@ import { PrimaryButton } from "./components/PrimaryButton";
 import { ScreenBackground } from "./components/ScreenBackground";
 import { colors } from "./theme";
 import { useI18n } from "../i18n";
+import { useMusic } from "../audio/useMusic";
 
 type Props = NativeStackScreenProps<RootStackParamList, "RegionSelect">;
 
@@ -16,6 +17,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "RegionSelect">;
  * future second region would slot in.
  */
 export function RegionSelectScreen({ navigation }: Props) {
+  useMusic("title");
   const { t } = useI18n();
   return (
     <ScreenBackground style={styles.container}>

@@ -21,5 +21,6 @@ export type RootStackParamList = {
   Shop: undefined;
   Help: undefined;
   Settings: undefined;
+  MusicRoom: undefined;
   CreatureDetail: CreatureDetailParams;
 };
