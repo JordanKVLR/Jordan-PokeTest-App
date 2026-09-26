@@ -11,7 +11,8 @@
     "web": "expo start --web",
     "test": "jest",
     "test:watch": "jest --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:web": "bash scripts/build-web.sh"
   },
   "dependencies": {
     "@expo/metro-runtime": "~4.0.0",

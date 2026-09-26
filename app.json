@@ -14,7 +14,7 @@
       "package": "com.melita.game"
     },
     "experiments": {
-      "baseUrl": "/Jordan-PokeTest-App"
+      "baseUrl": "/__maltese_base__"
     }
   }
 }
