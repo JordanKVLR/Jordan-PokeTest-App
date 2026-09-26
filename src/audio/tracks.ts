@@ -278,7 +278,6 @@ const battleGym: Track = {
   parts: [
     ...battleTrainer.parts,
     { instrument: "brass", gain: 0.18, pan: -0.15, notes: CHALLENGE_MELODY },
-    { instrument: "pad", gain: 0.12, notes: sustain(CHALLENGE_CHORDS, 3, 8) },
   ],
   drums: [
     ...(battleTrainer.drums ?? []),

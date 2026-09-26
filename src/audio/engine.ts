@@ -70,14 +70,38 @@ function makeNoise(context: Ctx): AudioBuffer {
 }
 
 /** A generated room: two seconds of noise, decaying — a stone chapel more than a concert hall. */
-function makeImpulse(context: Ctx, seconds = 2.2): AudioBuffer {
+function makeImpulse(context: Ctx, seconds = 1.5): AudioBuffer {
+  // Mono and a second and a half: a stereo two-second room cost four times as much to run and
+  // was the heaviest single thing in the mix. Under music this soft, nobody hears the difference.
   const length = Math.floor(context.sampleRate * seconds);
-  const impulse = context.createBuffer(2, length, context.sampleRate);
-  for (let channel = 0; channel < 2; channel++) {
-    const data = impulse.getChannelData(channel);
-    for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 3.2);
-  }
+  const impulse = context.createBuffer(1, length, context.sampleRate);
+  const data = impulse.getChannelData(0);
+  for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 3.2);
   return impulse;
+}
+
+/** The mixing desk: music and effects buses into a shared reverb and a safety compressor. */
+function buildGraph(context: BaseAudioContext): Buses {
+  const master = context.createGain();
+  const compressor = context.createDynamicsCompressor();
+  // Glue and safety: nothing the game does together — a crit over the gym theme — clips.
+  compressor.threshold.value = -12;
+  compressor.ratio.value = 4;
+  compressor.attack.value = 0.004;
+  compressor.release.value = 0.2;
+  master.connect(compressor).connect(context.destination);
+  const music = context.createGain();
+  const sfx = context.createGain();
+  const reverb = context.createConvolver();
+  reverb.channelCount = 1;
+  reverb.channelCountMode = "explicit";
+  reverb.buffer = makeImpulse(context as Ctx);
+  const reverbSend = context.createGain();
+  reverbSend.gain.value = 0.28;
+  reverbSend.connect(reverb).connect(master);
+  music.connect(master);
+  sfx.connect(master);
+  return { master, music, sfx, reverb, reverbSend, noise: makeNoise(context as Ctx) };
 }
 
 /** Creates the context on the first gesture and plays whatever was asked for before it. */
@@ -85,26 +109,12 @@ function unlockAudioUnsafe(): void {
   if (!audioSupported()) return;
   if (!ctx) {
     const Context = contextClass()!;
-    ctx = new Context({ latencyHint: "interactive" });
-    const master = ctx.createGain();
-    const compressor = ctx.createDynamicsCompressor();
-    // Glue and safety: nothing the game does together — a crit over the gym theme — clips.
-    compressor.threshold.value = -12;
-    compressor.ratio.value = 4;
-    compressor.attack.value = 0.004;
-    compressor.release.value = 0.2;
-    master.connect(compressor).connect(ctx.destination);
-    const music = ctx.createGain();
-    const sfx = ctx.createGain();
-    const reverb = ctx.createConvolver();
-    reverb.buffer = makeImpulse(ctx);
-    const reverbSend = ctx.createGain();
-    reverbSend.gain.value = 0.28;
-    reverbSend.connect(reverb).connect(master);
-    music.connect(master);
-    sfx.connect(master);
-    buses = { master, music, sfx, reverb, reverbSend, noise: makeNoise(ctx) };
+    // "playback" asks for a roomier audio buffer than "interactive": a few milliseconds more
+    // latency on a tap, in exchange for music that doesn't break up when a phone is busy.
+    ctx = new Context({ latencyHint: "playback" });
+    buses = buildGraph(ctx);
     applyVolumes();
+    prepareDrumSamples();
     prewarmPlucks(ctx);
   }
   if (ctx.state === "suspended") void ctx.resume();
@@ -151,6 +161,7 @@ export function sfxEnabled(): boolean {
  * well off pitch — a third of a semitone by A5. The buffer is built at the nearest whole period
  * and `playbackRate` nudges it to true pitch (measured in the browser to within a few cents).
  */
+const PLUCK_SECONDS = 1.6;
 const pluckCache = new Map<string, { buffer: AudioBuffer; playbackRate: number }>();
 function pluckBuffer(context: Ctx, midi: number, decay: number, seconds: number): { buffer: AudioBuffer; playbackRate: number } {
   const key = `${midi}:${decay}`;
@@ -162,11 +173,12 @@ function pluckBuffer(context: Ctx, midi: number, decay: number, seconds: number)
   const target = midiToFrequency(midi);
   const period = Math.max(3, Math.round(rate / target + 0.5));
   const ring = new Float32Array(period);
-  // A slightly smoothed burst: less harsh than white noise, closer to a fingertip than a pick.
+  // A smoothed burst: less harsh than white noise, closer to a fingertip than a pick. (The
+  // smoothing also does the job a per-note tone filter used to, for free.)
   let previous = 0;
   for (let i = 0; i < period; i++) {
     const n = Math.random() * 2 - 1;
-    previous = previous * 0.35 + n * 0.65;
+    previous = previous * 0.55 + n * 0.45;
     ring[i] = previous;
   }
   let index = 0;
@@ -186,7 +198,7 @@ function pluckBuffer(context: Ctx, midi: number, decay: number, seconds: number)
 function prewarmPlucks(context: Ctx) {
   let midi = 40;
   const next = () => {
-    for (let i = 0; i < 3 && midi <= 84; i++, midi++) pluckBuffer(context, midi, 0.996, 2.2);
+    for (let i = 0; i < 3 && midi <= 84; i++, midi++) pluckBuffer(context, midi, 0.996, PLUCK_SECONDS);
     if (midi <= 84) setTimeout(next, 30);
   };
   setTimeout(next, 30);
@@ -218,12 +230,13 @@ function osc(context: Ctx, type: OscillatorType, frequency: number, time: number
   return node;
 }
 
-function vibrato(context: Ctx, target: AudioParam, time: number, stop: number, rate: number, depth: number, delay: number) {
+function vibrato(context: Ctx, target: AudioParam, time: number, stop: number, rate: number, depth: number, delay: number): GainNode {
   const lfo = osc(context, "sine", rate, time, stop);
   const amount = context.createGain();
   amount.gain.setValueAtTime(0, time);
   amount.gain.linearRampToValueAtTime(depth, time + delay + 0.25);
   lfo.connect(amount).connect(target);
+  return amount;
 }
 
 /**
@@ -240,9 +253,29 @@ const INSTRUMENT_TRIM: Record<InstrumentId, number> = {
   bell: 1.1,
   marimba: 1.3,
   pad: 1,
-  bass: 0.35,
+  bass: 0.5,
   lead: 0.55,
 };
+
+/**
+ * Instruments whose tone filter never moves. On the sequencer's fast path the filter lives once
+ * on the part's bus instead of being built for every note.
+ */
+const PART_FILTER: Partial<Record<InstrumentId, { type: BiquadFilterType; frequency: number; q: number }>> = {
+  bass: { type: "lowpass", frequency: 560, q: 0.7 },
+  reed: { type: "lowpass", frequency: 2200, q: 1.5 },
+  lead: { type: "lowpass", frequency: 2800, q: 0.7 },
+  pad: { type: "lowpass", frequency: 1100, q: 0.7 },
+  zaqq: { type: "bandpass", frequency: 1000, q: 1.2 },
+};
+
+function makeFilter(context: BaseAudioContext, spec: { type: BiquadFilterType; frequency: number; q: number }): BiquadFilterNode {
+  const filter = context.createBiquadFilter();
+  filter.type = spec.type;
+  filter.frequency.value = spec.frequency;
+  filter.Q.value = spec.q;
+  return filter;
+}
 
 /** Plays one note on one instrument. `duration` is the written length in seconds. */
 export function playNote(
@@ -253,37 +286,60 @@ export function playNote(
   level: number,
   pan: number,
   destination: AudioNode,
-  wet = 0.3
+  wet = 0.3,
+  /**
+   * The sequencer's fast path: the destination is a part bus that already carries the level,
+   * trim, pan and reverb send, so the note connects straight to it. Building those per note was
+   * most of what made busy pieces stutter on phones.
+   */
+  raw = false
 ): void {
   const live = audio();
   if (!live) return;
   const { ctx: context, buses: b } = live;
   const frequency = midiToFrequency(midi);
-  const out = context.createGain();
-  out.gain.value = level * INSTRUMENT_TRIM[instrument];
-  const target = panner(context, pan, destination);
-  out.connect(target);
-  if (wet > 0) {
-    const send = context.createGain();
-    send.gain.value = wet;
-    out.connect(send).connect(b.reverbSend);
+  let out: AudioNode = destination;
+  if (!raw) {
+    const gain = context.createGain();
+    gain.gain.value = level * INSTRUMENT_TRIM[instrument];
+    gain.connect(panner(context, pan, destination));
+    if (wet > 0) {
+      const send = context.createGain();
+      send.gain.value = wet;
+      gain.connect(send).connect(b.reverbSend);
+    }
+    out = gain;
   }
+
+  if (SAMPLED_INSTRUMENTS[instrument] && !renderingSample) {
+    const sample = toneSample(instrument, midi);
+    if (sample) {
+      playSample(sample, time, 1, out);
+      return;
+    }
+  }
+
+  /** Where a static-filter instrument's oscillators go: its own filter, or straight on if the part has one. */
+  const toneInput = (next: AudioNode): AudioNode => {
+    const spec = PART_FILTER[instrument];
+    if (!spec || raw) return next;
+    const filter = makeFilter(context, spec);
+    filter.connect(next);
+    return filter;
+  };
 
   switch (instrument) {
     case "guitar": {
       const source = context.createBufferSource();
-      const string = pluckBuffer(context, midi, 0.996, 2.2);
+      const string = pluckBuffer(context, midi, 0.996, PLUCK_SECONDS);
       source.buffer = string.buffer;
       source.playbackRate.value = string.playbackRate;
-      const tone = context.createBiquadFilter();
-      tone.type = "lowpass";
-      tone.frequency.value = 3200;
       const g = context.createGain();
       const end = time + Math.max(duration, 0.25) + 0.6;
       g.gain.setValueAtTime(0.9, time);
       g.gain.setValueAtTime(0.9, end - 0.3);
       g.gain.exponentialRampToValueAtTime(0.0001, end);
-      source.connect(tone).connect(g).connect(out);
+      source.connect(g).connect(out);
       source.start(time);
       source.stop(end);
       break;
@@ -292,15 +348,9 @@ export function playNote(
       const stop = time + duration + 0.12;
       const g = context.createGain();
       envelope(g, time, 0.9, 0.006, Math.max(0.02, duration - 0.05), 0.1);
-      const filter = context.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.setValueAtTime(900, time);
-      filter.frequency.exponentialRampToValueAtTime(320, time + 0.25);
-      osc(context, "triangle", frequency, time, stop).connect(filter);
-      const sub = context.createGain();
-      sub.gain.value = 0.5;
-      osc(context, "sine", frequency, time, stop).connect(sub).connect(filter);
-      filter.connect(g).connect(out);
+      // One triangle through a fixed filter: plenty of weight, and the bass plays on every beat.
+      g.connect(out);
+      osc(context, "triangle", frequency, time, stop).connect(toneInput(g));
       break;
     }
     case "flute": {
@@ -311,20 +361,9 @@ export function playNote(
       const edge = osc(context, "triangle", frequency, time, stop);
       const edgeLevel = context.createGain();
       edgeLevel.gain.value = 0.25;
-      vibrato(context, body.frequency, time, stop, 5.2, frequency * 0.006, 0.15);
-      vibrato(context, edge.frequency, time, stop, 5.2, frequency * 0.006, 0.15);
-      // A little breath in the tone.
-      const breath = context.createBufferSource();
-      breath.buffer = b.noise;
-      const breathFilter = context.createBiquadFilter();
-      breathFilter.type = "bandpass";
-      breathFilter.frequency.value = frequency * 2;
-      breathFilter.Q.value = 2;
-      const breathLevel = context.createGain();
-      breathLevel.gain.value = 0.06;
-      breath.connect(breathFilter).connect(breathLevel).connect(g);
-      breath.start(time, Math.random());
-      breath.stop(stop);
+      // One vibrato drives both voices.
+      const depth = vibrato(context, body.frequency, time, stop, 5.2, frequency * 0.006, 0.15);
+      depth.connect(edge.frequency);
       body.connect(g);
       edge.connect(edgeLevel).connect(g);
       g.connect(out);
@@ -334,38 +373,25 @@ export function playNote(
       const stop = time + duration + 0.1;
       const g = context.createGain();
       envelope(g, time, 0.5, 0.02, Math.max(0.02, duration - 0.04), 0.08);
-      const filter = context.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.value = 2200;
-      filter.Q.value = 1.5;
-      osc(context, "sawtooth", frequency, time, stop, -7).connect(filter);
-      osc(context, "square", frequency, time, stop, 7).connect(filter);
-      // The bellows' wobble.
-      const tremolo = context.createGain();
-      tremolo.gain.value = 0.85;
-      const lfo = osc(context, "sine", 6, time, stop);
-      const depth = context.createGain();
-      depth.gain.value = 0.15;
-      lfo.connect(depth).connect(tremolo.gain);
-      filter.connect(tremolo).connect(g).connect(out);
+      g.connect(out);
+      const input = toneInput(g);
+      // The two detuned voices beat against each other — the accordion's shimmer, for free.
+      osc(context, "sawtooth", frequency, time, stop, -7).connect(input);
+      osc(context, "square", frequency, time, stop, 7).connect(input);
       break;
     }
     case "zaqq": {
       const stop = time + duration + 0.3;
       const g = context.createGain();
       envelope(g, time, 0.6, 0.25, Math.max(0.02, duration - 0.3), 0.3);
-      const nasal = context.createBiquadFilter();
-      nasal.type = "bandpass";
-      nasal.frequency.value = 1000;
-      nasal.Q.value = 1.2;
+      g.connect(out);
+      const nasal = toneInput(g);
       const saw = osc(context, "sawtooth", frequency, time, stop);
       const square = osc(context, "square", frequency * 2, time, stop, 4);
-      vibrato(context, saw.frequency, time, stop, 4.5, frequency * 0.003, 0.4);
       saw.connect(nasal);
       const squareLevel = context.createGain();
       squareLevel.gain.value = 0.3;
       square.connect(squareLevel).connect(nasal);
-      nasal.connect(g).connect(out);
       break;
     }
     case "brass": {
@@ -387,16 +413,10 @@ export function playNote(
       const stop = time + duration + 0.1;
       const g = context.createGain();
       envelope(g, time, 0.42, 0.01, Math.max(0.02, duration - 0.03), 0.09);
-      const filter = context.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.setValueAtTime(4200, time);
-      filter.frequency.exponentialRampToValueAtTime(1800, time + duration + 0.05);
-      const square = osc(context, "square", frequency, time, stop);
-      const saw = osc(context, "sawtooth", frequency, time, stop, 8);
-      vibrato(context, square.frequency, time, stop, 6, frequency * 0.005, 0.2);
-      square.connect(filter);
-      saw.connect(filter);
-      filter.connect(g).connect(out);
+      g.connect(out);
+      const input = toneInput(g);
+      osc(context, "square", frequency, time, stop).connect(input);
+      osc(context, "sawtooth", frequency, time, stop, 8).connect(input);
       break;
     }
     case "bell": {
@@ -433,21 +453,103 @@ export function playNote(
       const stop = time + duration + 0.9;
       const g = context.createGain();
       envelope(g, time, 0.35, 0.45, Math.max(0.02, duration - 0.45), 0.9);
-      const filter = context.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.value = 1100;
-      osc(context, "sawtooth", frequency, time, stop, -9).connect(filter);
-      osc(context, "sawtooth", frequency, time, stop, 9).connect(filter);
-      filter.connect(g).connect(out);
+      g.connect(out);
+      const input = toneInput(g);
+      osc(context, "sawtooth", frequency, time, stop, -9).connect(input);
+      osc(context, "sawtooth", frequency, time, stop, 9).connect(input);
       break;
     }
   }
+}
+
+// ─── Samples ─────────────────────────────────────────────────────────────────────────────────
+//
+// Percussive sounds are the same every time, so there is no reason to rebuild each one from
+// oscillators and filters on every hit. They are rendered once, offline, into short samples;
+// after that a drum hit or a bell note is a single buffer playing. Until a sample is ready the
+// live synthesis stands in, so nothing waits.
+
+const drumSamples = new Map<DrumVoice, AudioBuffer>();
+const toneSamples = new Map<string, AudioBuffer>();
+const pendingSamples = new Set<string>();
+/** True while rendering a sample, so the synth doesn't try to use the sample it is making. */
+let renderingSample = false;
+
+const DRUM_SECONDS: Record<DrumVoice, number> = {
+  kick: 0.45,
+  snare: 0.25,
+  hat: 0.08,
+  tambourine: 0.2,
+  dum: 0.45,
+  tek: 0.1,
+  crash: 1.7,
+  shaker: 0.1,
+};
+
+/** Renders one sound into a buffer using the same synth code, on a throwaway offline context. */
+function renderSample(seconds: number, draw: (destination: AudioNode) => void): Promise<AudioBuffer> | null {
+  if (!ctx || typeof OfflineAudioContext === "undefined") return null;
+  const offline = new OfflineAudioContext(1, Math.ceil(ctx.sampleRate * seconds), ctx.sampleRate);
+  const saved = { ctx, buses };
+  try {
+    ctx = offline as unknown as Ctx;
+    // Only the noise source is needed by the percussive voices.
+    buses = { noise: makeNoise(offline as unknown as Ctx) } as Buses;
+    renderingSample = true;
+    draw(offline.destination);
+  } finally {
+    renderingSample = false;
+    ctx = saved.ctx;
+    buses = saved.buses;
+  }
+  return offline.startRendering();
+}
+
+function prepareDrumSamples() {
+  for (const voice of Object.keys(DRUM_SECONDS) as DrumVoice[]) {
+    renderSample(DRUM_SECONDS[voice], (destination) => playDrum(voice, 0, 1, destination))
+      ?.then((buffer) => drumSamples.set(voice, buffer))
+      .catch(() => {});
+  }
+}
+
+const SAMPLED_INSTRUMENTS: Partial<Record<InstrumentId, number>> = { bell: 1.8, marimba: 0.7 };
+
+function toneSample(instrument: InstrumentId, midi: number): AudioBuffer | undefined {
+  const key = `${instrument}:${midi}`;
+  const ready = toneSamples.get(key);
+  if (ready || pendingSamples.has(key)) return ready;
+  pendingSamples.add(key);
+  renderSample(SAMPLED_INSTRUMENTS[instrument]!, (destination) => playNote(instrument, midi, 0, 0.4, 1, 0, destination, 0, true))
+    ?.then((buffer) => toneSamples.set(key, buffer))
+    .catch(() => {});
+  return undefined;
+}
+
+/** Plays a ready-made sample. */
+function playSample(buffer: AudioBuffer, time: number, level: number, destination: AudioNode) {
+  if (!ctx) return;
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  if (level === 1) {
+    source.connect(destination);
+  } else {
+    const gain = ctx.createGain();
+    gain.gain.value = level;
+    source.connect(gain).connect(destination);
+  }
+  source.start(time);
 }
 
 /** One drum hit. */
 export function playDrum(voice: DrumVoice, time: number, level: number, destination: AudioNode): void {
   const live = audio();
   if (!live) return;
+  const sample = renderingSample ? undefined : drumSamples.get(voice);
+  if (sample) {
+    playSample(sample, time, level, destination);
+    return;
+  }
   const { ctx: context, buses: b } = live;
   const out = context.createGain();
   out.gain.value = level;
@@ -516,13 +618,15 @@ export function playDrum(voice: DrumVoice, time: number, level: number, destinat
 const safeNote = quietly(playNote);
 const safeDrum = quietly(playDrum);
 
-const LOOKAHEAD_S = 0.14;
-const TICK_MS = 25;
+// Schedule a quarter of a second ahead, so a busy moment on the page (a screen change, a big
+// animation) never leaves the music waiting for its next notes.
+const LOOKAHEAD_S = 0.25;
+const TICK_MS = 40;
 
 interface ScheduledPart {
   instrument: InstrumentId;
-  level: number;
-  pan: number;
+  /** Level, trim, pan and reverb send, built once for the part rather than once per note. */
+  bus: AudioNode;
   byStep: Map<number, NoteEvent[]>;
 }
 
@@ -542,7 +646,9 @@ class TrackPlayer {
     private readonly context: Ctx,
     id: TrackId,
     destination: AudioNode,
-    private readonly onEnd?: () => void
+    private readonly onEnd?: () => void,
+    /** For offline analysis: leave out the drums, or play only some instruments. */
+    private readonly only?: { drums?: boolean; instruments?: InstrumentId[] }
   ) {
     this.id = id;
     this.track = TRACKS[id];
@@ -555,10 +661,25 @@ class TrackPlayer {
         list.push(event);
         byStep.set(event.step, list);
       }
-      return { instrument: part.instrument, level: part.gain, pan: part.pan ?? 0, byStep };
+      return { instrument: part.instrument, bus: null as unknown as AudioNode, byStep };
     });
     this.output = context.createGain();
     this.output.connect(destination);
+    const reverbSend = audio()?.buses.reverbSend;
+    this.track.parts.forEach((part, index) => {
+      const bus = context.createGain();
+      bus.gain.value = part.gain * INSTRUMENT_TRIM[part.instrument];
+      const spec = PART_FILTER[part.instrument];
+      const panned = panner(context, part.pan ?? 0, this.output);
+      if (spec) bus.connect(makeFilter(context, spec)).connect(panned);
+      else bus.connect(panned);
+      if (reverbSend) {
+        const send = context.createGain();
+        send.gain.value = 0.3;
+        bus.connect(send).connect(reverbSend);
+      }
+      this.parts[index].bus = bus;
+    });
     this.nextTime = context.currentTime + 0.08;
   }
 
@@ -587,11 +708,21 @@ class TrackPlayer {
     this.output.gain.setTargetAtTime(Math.max(0.0001, level), now, seconds / 3);
   }
 
+  /** Schedules everything up to `until` in one go — used to render a piece offline. */
+  scheduleUntil(until: number) {
+    this.nextTime = 0.05;
+    while (this.nextTime < until && !this.finished) this.scheduleNextStep();
+  }
+
   private tick() {
     const horizon = this.context.currentTime + LOOKAHEAD_S;
     // After a long stall (a hidden tab), skip ahead rather than playing a pile-up of notes.
     if (this.nextTime < this.context.currentTime - 0.25) this.nextTime = this.context.currentTime + 0.02;
-    while (this.nextTime < horizon && !this.finished) {
+    while (this.nextTime < horizon && !this.finished) this.scheduleNextStep();
+  }
+
+  private scheduleNextStep() {
+    {
       if (this.step >= this.length) {
         if (!this.track.loop) {
           this.finished = true;
@@ -605,13 +736,14 @@ class TrackPlayer {
       const swing = this.track.swing && this.step % 2 === 1 ? this.track.swing * this.stepSeconds : 0;
       const time = this.nextTime + swing;
       for (const part of this.parts) {
+        if (this.only?.instruments && !this.only.instruments.includes(part.instrument)) continue;
         for (const event of part.byStep.get(this.step) ?? []) {
           for (const midi of event.midi) {
-            safeNote(part.instrument, midi, time, event.length * this.stepSeconds, part.level, part.pan, this.output);
+            safeNote(part.instrument, midi, time, event.length * this.stepSeconds, 1, 0, part.bus, 0, true);
           }
         }
       }
-      for (const drum of this.track.drums ?? []) {
+      for (const drum of this.only?.drums === false ? [] : this.track.drums ?? []) {
         const hit = drum.pattern[this.step % drum.pattern.length];
         if (hit === "x" || hit === "X") safeDrum(drum.voice, time, drum.gain * (hit === "X" ? 1.4 : 1), this.output);
       }
@@ -685,6 +817,38 @@ function playJingleUnsafe(id: TrackId, options: { then?: "resume" | "stop" } = {
   player.start(0);
 }
 
+/**
+ * Renders a piece faster than real time into a buffer, and times it — how much of the audio
+ * thread's budget the piece needs. A figure near or over 1 means dropouts on a slow phone.
+ */
+export async function renderOffline(
+  id: TrackId,
+  seconds: number,
+  only?: { drums?: boolean; instruments?: InstrumentId[]; reverb?: boolean }
+): Promise<{ buffer: AudioBuffer; scheduleMs: number; renderMs: number; load: number }> {
+  const rate = ctx?.sampleRate ?? 48000;
+  const offline = new OfflineAudioContext(2, Math.ceil(rate * seconds), rate);
+  const saved = { ctx, buses };
+  let scheduleMs = 0;
+  try {
+    ctx = offline as unknown as Ctx;
+    buses = buildGraph(offline);
+    buses.music.gain.value = 0.5;
+    if (only?.reverb === false) buses.reverbSend.disconnect();
+    const player = new TrackPlayer(ctx, id, buses.music, undefined, only);
+    const started = performance.now();
+    player.scheduleUntil(seconds);
+    scheduleMs = performance.now() - started;
+  } finally {
+    ctx = saved.ctx;
+    buses = saved.buses;
+  }
+  const started = performance.now();
+  const buffer = await offline.startRendering();
+  const renderMs = performance.now() - started;
+  return { buffer, scheduleMs, renderMs, load: renderMs / (seconds * 1000) };
+}
+
 /** Just what is playing, for tests of the wiring and for the debug overlay. */
 export function nowPlaying(): { music: TrackId | null; wanted: TrackId | null } {
   return { music: current?.id ?? null, wanted: wantedTrack };
@@ -693,7 +857,7 @@ export function nowPlaying(): { music: TrackId | null; wanted: TrackId | null } 
 // A window into the engine for automated checks and for anyone curious in the console:
 // `__maltaAudio.nowPlaying()` says what's on; `__maltaAudio.audio()` gives the live graph.
 if (typeof globalThis !== "undefined") {
-  (globalThis as unknown as { __maltaAudio?: unknown }).__maltaAudio = { nowPlaying, audio, playNote, playDrum };
+  (globalThis as unknown as { __maltaAudio?: unknown }).__maltaAudio = { nowPlaying, audio, playNote, playDrum, renderOffline };
 }
 
 export const unlockAudio = quietly(unlockAudioUnsafe);
