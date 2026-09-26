@@ -4,34 +4,117 @@
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <!-- Ask browsers to check for a new version of this page rather than trusting an old copy:
+         each deploy points at a newly named game script. -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>A Maltese Tale</title>
-    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
-      /* These styles make the body full-height */
       html,
       body {
         height: 100%;
       }
-      /* These styles disable body scrolling if you are using <ScrollView> */
       body {
         overflow: hidden;
+        background: #eaf4f8;
       }
-      /* These styles make the root element full-height */
       #root {
         display: flex;
         height: 100%;
         flex: 1;
       }
+      #boot-trouble {
+        display: none;
+        position: fixed;
+        inset: 0;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+        color: #1d2b36;
+        text-align: center;
+        background: #eaf4f8;
+      }
+      #boot-trouble button {
+        margin-top: 16px;
+        padding: 12px 24px;
+        border: 0;
+        border-radius: 999px;
+        background: #f0a030;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 700;
+      }
+      #boot-trouble pre {
+        margin-top: 16px;
+        max-width: 100%;
+        white-space: pre-wrap;
+        font-size: 11px;
+        color: #7a8a96;
+      }
     </style>
+    <script>
+      // A safety net for the moments between loading this page and the game starting.
+      // If the game's script can't be fetched (an old cached copy of this page naming a script
+      // that a newer deploy replaced), reload once with a cache-buster. If the game still hasn't
+      // drawn anything after a while, say so and show why, instead of a blank white page.
+      (function () {
+        var errors = [];
+        window.__bootErrors = errors;
+        window.addEventListener(
+          "error",
+          function (event) {
+            var target = event.target;
+            if (target && target.tagName === "SCRIPT") {
+              errors.push("Could not load " + target.src);
+              try {
+                if (!sessionStorage.getItem("maltese-reloaded")) {
+                  sessionStorage.setItem("maltese-reloaded", "1");
+                  location.replace(location.pathname + "?v=" + Date.now());
+                  return;
+                }
+              } catch (e) {}
+            } else if (event.message) {
+              errors.push(event.message + (event.filename ? " (" + event.filename + ":" + event.lineno + ")" : ""));
+            }
+          },
+          true
+        );
+        window.addEventListener("unhandledrejection", function (event) {
+          errors.push("Unhandled: " + (event.reason && (event.reason.stack || event.reason.message || event.reason)));
+        });
+        function check() {
+          var root = document.getElementById("root");
+          if (root && root.children.length > 0) {
+            try {
+              sessionStorage.removeItem("maltese-reloaded");
+            } catch (e) {}
+            return;
+          }
+          var box = document.getElementById("boot-trouble");
+          if (!box) return;
+          box.style.display = "flex";
+          document.getElementById("boot-detail").textContent = errors.join("\n") || "The game did not start.";
+        }
+        window.addEventListener("load", function () {
+          setTimeout(check, 8000);
+        });
+      })();
+    </script>
   </head>
 
   <body>
-    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
-    <noscript>
-      You need to enable JavaScript to run this app.
-    </noscript>
-    <!-- The root element for your Expo app. -->
+    <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-  <script src="/Jordan-PokeTest-App/_expo/static/js/web/AppEntry-95a3d1697ce079ae78dbb78a8b9a79d8.js" defer></script>
+    <div id="boot-trouble">
+      <div>
+        <strong>A Maltese Tale couldn't start.</strong>
+        <div>Il-logħba ma setgħetx tibda.</div>
+        <button onclick="location.replace(location.pathname + '?v=' + Date.now())">Reload / Erġa' ipprova</button>
+        <pre id="boot-detail"></pre>
+      </div>
+    </div>
+  <script src="/Jordan-PokeTest-App/_expo/static/js/web/AppEntry-0291be037c0b3ac9eb7747029ef871c1.js" defer></script>
 </body>
 </html>
