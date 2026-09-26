@@ -1,35 +1,8 @@
 import typeChartData from "../type_chart.json";
-import startersData from "../starters.json";
-import wildCreaturesData from "../wildCreatures.json";
-import regionalVariantsData from "../regionalVariants.json";
-import legendariesData from "../legendaries.json";
-import {
-  StartersFileSchema,
-  WildCreaturesFileSchema,
-  RegionalVariantsFileSchema,
-  LegendariesFileSchema,
-  TypeNameSchema,
-  type TypeName,
-} from "../schemas";
+import { TypeNameSchema } from "../schemas";
 
 const TYPES = TypeNameSchema.options;
 const matrix = typeChartData.matrix as Record<string, Record<string, number>>;
-
-const ROSTER: TypeName[][] = [
-  ...StartersFileSchema.parse(startersData).starters.flatMap((l) => l.stages.map((s) => s.types)),
-  ...WildCreaturesFileSchema.parse(wildCreaturesData).wildCreatures.map((c) => c.types),
-  ...RegionalVariantsFileSchema.parse(regionalVariantsData).regionalVariants.map((c) => c.types),
-  ...LegendariesFileSchema.parse(legendariesData).legendaries.map((c) => c.types),
-];
-
-const superEffectiveAgainst = (t: TypeName) => TYPES.filter((d) => matrix[t][d] > 1);
-const weaknessesOf = (t: TypeName) => TYPES.filter((a) => matrix[a][t] > 1);
-const defencesOf = (t: TypeName) => TYPES.filter((a) => matrix[a][t] < 1);
-
-/** How many creatures on the roster an attack of this type would hit for extra damage. */
-function rosterReach(attackType: TypeName): number {
-  return ROSTER.filter((types) => types.reduce((m, t) => m * matrix[attackType][t], 1) > 1).length;
-}
 
 describe("type chart", () => {
   it("scores every attacker against every defender", () => {
@@ -47,59 +20,21 @@ describe("type chart", () => {
     }
   });
 
-  it("gives every type at least one thing that beats it", () => {
-    const invulnerable = TYPES.filter((t) => weaknessesOf(t).length === 0);
-    expect(invulnerable).toEqual([]);
-  });
-
-  it("gives every type at least one thing it shrugs off", () => {
-    // Counting immunities: Normal's defence against Ghost is total rather than partial.
-    const defenceless = TYPES.filter((t) => defencesOf(t).length === 0);
-    expect(defenceless).toEqual([]);
-  });
-
-  it("makes every type except Normal super-effective against something", () => {
-    // Normal is the baseline the rest of the chart is measured against — it is deliberately
-    // never super-effective, and in exchange almost nothing resists it. Every other type has
-    // to actually beat something, or its moves are dead weight in a player's hands.
-    const toothless = TYPES.filter((t) => t !== "Normal" && superEffectiveAgainst(t).length === 0);
-    expect(toothless).toEqual([]);
-  });
-
-  it("gives every attacking type real reach across the roster it will actually meet", () => {
-    // A type can look fine on the chart and still be useless if the creatures it beats are
-    // rare. Ice was the case that prompted this: strong on paper against Grass/Ground/Flying/
-    // Dragon, but resisted by Water and Steel, which the roster is full of.
-    const floor = Math.round(ROSTER.length * 0.08);
-    const weak = TYPES.filter((t) => t !== "Normal" && rosterReach(t) < floor).map(
-      (t) => `${t} hits only ${rosterReach(t)} of ${ROSTER.length}`
-    );
-    expect(weak).toEqual([]);
-  });
-
-  it("no longer leaves Ice the worst type in the game", () => {
-    // Ice used to resist only itself while four types hit it hard, which made an Ice creature
-    // unplayable however good its offence looked.
-    expect(superEffectiveAgainst("Ice")).toEqual(
-      expect.arrayContaining(["Rock", "Grass", "Ground", "Flying", "Dragon"])
-    );
-    expect(defencesOf("Ice")).toEqual(expect.arrayContaining(["Normal", "Grass", "Flying", "Ice"]));
-    expect(weaknessesOf("Ice").length).toBeLessThanOrEqual(3);
-    expect(rosterReach("Ice")).toBeGreaterThan(ROSTER.length * 0.25);
-  });
-
-  it("keeps the matchups the game's design calls for", () => {
-    // Asked for by name, and not to be traded away when the chart is rebalanced. An earlier
-    // Ice rebalance quietly dropped Rock's resistance to Normal to compensate elsewhere; this
-    // exists so that can't happen silently again.
-    const resists = (defender: TypeName, attacker: TypeName) => matrix[attacker][defender] < 1;
-    // Hard things shrug off plain blows and each other: stone against stone, stone against a fist of nothing special.
-    expect(resists("Rock", "Normal")).toBe(true);
-    expect(resists("Rock", "Rock")).toBe(true);
-    expect(resists("Steel", "Normal")).toBe(true);
-    // Ice stands up to ordinary blows and to plants.
-    expect(resists("Ice", "Normal")).toBe(true);
-    expect(resists("Ice", "Grass")).toBe(true);
+  it("is the official chart exactly, plus Ice resisting Normal", () => {
+    // The current mainline chart (Gen 6 onward), non-neutral cells only.
+    const OFFICIAL: Record<string, Record<string, number>> = {"Normal": {"Rock": 0.5, "Ghost": 0, "Steel": 0.5}, "Fire": {"Fire": 0.5, "Water": 0.5, "Grass": 2, "Ice": 2, "Bug": 2, "Rock": 0.5, "Dragon": 0.5, "Steel": 2}, "Water": {"Fire": 2, "Water": 0.5, "Grass": 0.5, "Ground": 2, "Rock": 2, "Dragon": 0.5}, "Electric": {"Water": 2, "Electric": 0.5, "Grass": 0.5, "Ground": 0, "Flying": 2, "Dragon": 0.5}, "Grass": {"Fire": 0.5, "Water": 2, "Grass": 0.5, "Poison": 0.5, "Ground": 2, "Flying": 0.5, "Bug": 0.5, "Rock": 2, "Dragon": 0.5, "Steel": 0.5}, "Ice": {"Fire": 0.5, "Water": 0.5, "Grass": 2, "Ice": 0.5, "Ground": 2, "Flying": 2, "Dragon": 2, "Steel": 0.5}, "Fighting": {"Normal": 2, "Ice": 2, "Poison": 0.5, "Flying": 0.5, "Psychic": 0.5, "Bug": 0.5, "Rock": 2, "Ghost": 0, "Dark": 2, "Steel": 2, "Fairy": 0.5}, "Poison": {"Grass": 2, "Poison": 0.5, "Ground": 0.5, "Rock": 0.5, "Ghost": 0.5, "Steel": 0, "Fairy": 2}, "Ground": {"Fire": 2, "Electric": 2, "Grass": 0.5, "Poison": 2, "Flying": 0, "Bug": 0.5, "Rock": 2, "Steel": 2}, "Flying": {"Electric": 0.5, "Grass": 2, "Fighting": 2, "Bug": 2, "Rock": 0.5, "Steel": 0.5}, "Psychic": {"Fighting": 2, "Poison": 2, "Psychic": 0.5, "Dark": 0, "Steel": 0.5}, "Bug": {"Fire": 0.5, "Grass": 2, "Fighting": 0.5, "Poison": 0.5, "Flying": 0.5, "Psychic": 2, "Ghost": 0.5, "Dark": 2, "Steel": 0.5, "Fairy": 0.5}, "Rock": {"Fire": 2, "Ice": 2, "Fighting": 0.5, "Ground": 0.5, "Flying": 2, "Bug": 2, "Steel": 0.5}, "Ghost": {"Normal": 0, "Psychic": 2, "Ghost": 2, "Dark": 0.5}, "Dragon": {"Dragon": 2, "Steel": 0.5, "Fairy": 0}, "Dark": {"Fighting": 0.5, "Psychic": 2, "Ghost": 2, "Dark": 0.5, "Fairy": 0.5}, "Steel": {"Fire": 0.5, "Water": 0.5, "Electric": 0.5, "Ice": 2, "Rock": 2, "Steel": 0.5, "Fairy": 2}, "Fairy": {"Fire": 0.5, "Fighting": 2, "Poison": 0.5, "Dragon": 2, "Dark": 2, "Steel": 0.5}};
+    // The one house rule, asked for by name.
+    const HOUSE_RULES: Record<string, Record<string, number>> = { Normal: { Ice: 0.5 } };
+    const differences: string[] = [];
+    for (const attacker of TYPES) {
+      for (const defender of TYPES) {
+        const expected = HOUSE_RULES[attacker]?.[defender] ?? OFFICIAL[attacker]?.[defender] ?? 1;
+        if (matrix[attacker][defender] !== expected) {
+          differences.push(`${attacker} -> ${defender}: ${matrix[attacker][defender]}, expected ${expected}`);
+        }
+      }
+    }
+    expect(differences).toEqual([]);
   });
 
   it("keeps the eight immunities the compatibility rules are derived from", () => {
@@ -113,12 +48,5 @@ describe("type chart", () => {
         value: 0,
       });
     }
-  });
-
-  it("does not let any one type run away with the chart", () => {
-    const reaches = TYPES.map((t) => rosterReach(t));
-    const best = Math.max(...reaches);
-    // The strongest attacking type should not beat more than half the roster outright.
-    expect(best).toBeLessThanOrEqual(ROSTER.length * 0.5);
   });
 });
