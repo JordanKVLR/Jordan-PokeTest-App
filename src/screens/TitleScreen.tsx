@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { useGameStore } from "../state/gameStore";
@@ -8,10 +8,17 @@ import { colors } from "./theme";
 import { TitleLandscape } from "../art/titleLandscape";
 import { useI18n } from "../i18n";
 import { useMusic } from "../audio/useMusic";
+import { ThreeView } from "../three/ThreeView";
+import { createTitleScene } from "../three/titleScene";
+import { supports3D } from "../three/support";
+import { useSettings } from "../state/settingsStore";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Title">;
 
 export function TitleScreen({ navigation }: Props) {
+  const graphics = useSettings((s) => s.graphics);
+  const reducedMotion = useSettings((s) => s.reducedMotion);
+  const use3D = Platform.OS === "web" && graphics === "3d" && supports3D();
   useMusic("title");
   const hasHydrated = useGameStore((s) => s.hasHydrated);
   const hasSave = useGameStore((s) => s.party.length > 0);
@@ -30,7 +37,7 @@ export function TitleScreen({ navigation }: Props) {
 
   return (
     <ScreenBackground style={styles.container}>
-      <TitleLandscape />
+      {use3D ? <ThreeView testID="title-3d" create={() => createTitleScene({ reducedMotion })} /> : <TitleLandscape />}
       <View style={styles.crest}>
         <Text style={styles.crestGlyph}>✛</Text>
       </View>
@@ -39,7 +46,7 @@ export function TitleScreen({ navigation }: Props) {
         <Text style={styles.subtitle}>{t("title.tagline")}</Text>
       </View>
 
-      <View style={styles.actions}>
+      <View style={[styles.actions, use3D && styles.actions3D]}>
         <PrimaryButton testID="new-game" label={t("title.newGame")} onPress={handleNewGame} />
         <PrimaryButton
           testID="continue-game"
@@ -110,6 +117,12 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 320,
     gap: 12,
+  },
+  // Over the 3D coast the buttons sit on a frosted panel, so they read against sea or sky.
+  actions3D: {
+    backgroundColor: "rgba(255,255,255,0.82)",
+    borderRadius: 20,
+    padding: 16,
   },
   hint: {
     color: colors.text,

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { useGameStore } from "../state/gameStore";
@@ -26,6 +26,8 @@ import { useSettings } from "../state/settingsStore";
 import { encounterChance, type ControlSide } from "../game/settings";
 import { useMusic } from "../audio/useMusic";
 import { mapTrack } from "../audio/choose";
+import { Map3D } from "./components/Map3D";
+import { supports3D } from "../three/support";
 import { playJingle } from "../audio/engine";
 import { ui, world as worldSfx } from "../audio/sfx";
 import { useI18n, currentI18n } from "../i18n";
@@ -134,6 +136,8 @@ export function MapScreen({ navigation, route }: Props) {
   const drawerAnim = useRef(new Animated.Value(0)).current;
   const leadCreature = party.find((m) => m.currentHp > 0) ?? party[0];
   const trainers = trainersForZone(map.zoneId);
+  const graphics = useSettings((s) => s.graphics);
+  const use3D = Platform.OS === "web" && graphics === "3d" && supports3D();
   const stage = getStage(map.zoneId);
   const zoneBiome = stage?.biomes[0] ?? "grass";
   useMusic(mapTrack(stage));
@@ -331,6 +335,23 @@ export function MapScreen({ navigation, route }: Props) {
         { width: layout.viewportWidth, height: layout.viewportHeight },
       ]}
     >
+      {use3D && (
+        <Map3D
+          map={map}
+          player={anim}
+          follower={followerAnim}
+          facing={facing}
+          lead={leadCreature && showFollower ? { speciesId: leadCreature.speciesId, types: leadCreature.types } : null}
+          trainers={trainers.map((trainer) => ({
+            id: trainer.id,
+            row: trainer.position.row,
+            col: trainer.position.col,
+            isGymLeader: !!trainer.isGymLeader,
+            defeated: defeatedTrainerIds.includes(trainer.id),
+          }))}
+        />
+      )}
+      {!use3D && (
       <Animated.View
         style={{
           position: "absolute",
@@ -389,6 +410,7 @@ export function MapScreen({ navigation, route }: Props) {
           <PlayerSprite facing={facing} size={tile} />
         </Animated.View>
       </Animated.View>
+      )}
 
       <Animated.View testID="encounter-flash" pointerEvents="none" style={[styles.wash, { opacity: encounterFlash }]} />
       <Animated.View
