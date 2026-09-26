@@ -20,6 +20,7 @@
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.11.0",
     "@shopify/react-native-skia": "^1.5.0",
+    "@types/three": "^0.169.0",
     "expo": "~52.0.0",
     "expo-asset": "~11.0.1",
     "expo-linear-gradient": "~14.0.1",
@@ -32,6 +33,7 @@
     "react-native-screens": "~4.4.0",
     "react-native-svg": "^15.8.0",
     "react-native-web": "^0.19.13",
+    "three": "^0.169.0",
     "zod": "^3.23.8",
     "zustand": "^4.5.5"
   },

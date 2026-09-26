@@ -67,6 +67,7 @@ export const SETTINGS_SECTIONS: { title: StringKey; rows: Row[] }[] = [
   {
     title: "settings.section.display",
     rows: [
+      { kind: "choice", key: "graphics", options: ["3d", "2d"] },
       { kind: "choice", key: "textSize", options: ["normal", "large"] },
       { kind: "toggle", key: "reducedMotion" },
     ],

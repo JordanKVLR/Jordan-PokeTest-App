@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { useGameStore } from "../state/gameStore";
@@ -16,6 +16,9 @@ import { ScreenBackground } from "./components/ScreenBackground";
 import { useKeyboardShortcuts } from "./components/useKeyboardShortcuts";
 import { MoveDetailCard } from "./components/MoveDetailCard";
 import { useItemFlow } from "./components/useItemFlow";
+import { Creature3D } from "./components/Creature3D";
+import { useSettings } from "../state/settingsStore";
+import { supports3D } from "../three/support";
 import { useI18n } from "../i18n";
 import { colors } from "./theme";
 
@@ -86,6 +89,8 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
   const [nameDraft, setNameDraft] = useState("");
   const [openMoveId, setOpenMoveId] = useState<string | null>(null);
   const itemFlow = useItemFlow();
+  const graphics = useSettings((s) => s.graphics);
+  const show3D = Platform.OS === "web" && graphics === "3d" && supports3D();
   const { t, c } = useI18n();
 
   useKeyboardShortcuts({ m: () => navigation.popToTop() });
@@ -134,6 +139,7 @@ export function CreatureDetailScreen({ route, navigation }: Props) {
   return (
     <ScreenBackground style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {show3D && <Creature3D speciesId={speciesId} types={types} />}
         <View style={styles.headerTopRow}>
           <CreatureAvatar speciesId={speciesId} types={types} size={72} />
           <View style={styles.headerInfo}>

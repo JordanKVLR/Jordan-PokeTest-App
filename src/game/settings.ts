@@ -27,6 +27,8 @@ export type TrainerIntros = "full" | "brief";
 export type EncounterRate = "fewer" | "normal" | "more";
 export type TextSize = "normal" | "large";
 export type Volume = "off" | "low" | "medium" | "high";
+/** 3D scenes where the device can draw them, or the classic flat art. */
+export type Graphics = "3d" | "2d";
 
 export interface Settings {
   language: Language;
@@ -42,6 +44,7 @@ export interface Settings {
   textSize: TextSize;
   musicVolume: Volume;
   sfxVolume: Volume;
+  graphics: Graphics;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -58,6 +61,7 @@ export const DEFAULT_SETTINGS: Settings = {
   textSize: "normal",
   musicVolume: "medium",
   sfxVolume: "medium",
+  graphics: "3d",
 };
 
 const VOLUME_LEVEL: Record<Volume, number> = { off: 0, low: 0.4, medium: 0.7, high: 1 };

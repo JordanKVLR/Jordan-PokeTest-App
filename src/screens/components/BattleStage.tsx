@@ -1,5 +1,5 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, Platform, StyleSheet, Text, View } from "react-native";
 import type { TypeName } from "../../data/schemas";
 import { HpBar } from "./HpBar";
 import { TypeBadge } from "./TypeBadge";
@@ -9,8 +9,13 @@ import { BattleBackdrop, BattlePlatform } from "../../art/battleArt";
 import type { Biome } from "../../data/schemas";
 import { colors, typeColor, typeIcon } from "../theme";
 import { useI18n } from "../../i18n";
+import { useSettings } from "../../state/settingsStore";
+import { supports3D } from "../../three/support";
+import { Battle3D, type Battle3DHandle } from "./Battle3D";
 
 const STAGE_HEIGHT = 220;
+/** The 3D stage gets a little more room: depth needs height to read. */
+const STAGE_HEIGHT_3D = 280;
 const ENEMY_AVATAR_SIZE = 68;
 const PLAYER_AVATAR_SIZE = 92;
 const ENEMY_TOP = 18;
@@ -69,6 +74,10 @@ interface Props {
 export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleStage({ enemy, player, biome = "grass" }, ref) {
   const { t } = useI18n();
   const [stageWidth, setStageWidth] = useState(FALLBACK_STAGE_WIDTH);
+  const graphics = useSettings((s) => s.graphics);
+  // 3D where the device can draw it and the player hasn't asked for the classic look.
+  const use3D = Platform.OS === "web" && graphics === "3d" && supports3D();
+  const battle3d = useRef<Battle3DHandle>(null);
 
   const [projectileType, setProjectileType] = useState<TypeName>("Normal");
   const [projectileDirection, setProjectileDirection] = useState<ProjectileDirection>("toEnemy");
@@ -80,6 +89,10 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
 
   useImperativeHandle(ref, () => ({
     fireProjectile(moveType, direction) {
+      if (use3D) {
+        battle3d.current?.fireProjectile(moveType, direction, PROJECTILE_TRAVEL_MS);
+        return;
+      }
       setProjectileType(moveType);
       setProjectileDirection(direction);
       projectileProgress.setValue(0);
@@ -91,6 +104,10 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
       }).start(() => projectileOpacity.setValue(0));
     },
     throwBall() {
+      if (use3D) {
+        battle3d.current?.throwBall(BALL_TRAVEL_MS);
+        return;
+      }
       ballProgress.setValue(0);
       ballOpacity.setValue(1);
       Animated.timing(ballProgress, { toValue: 1, duration: BALL_TRAVEL_MS, useNativeDriver: false }).start(() =>
@@ -98,6 +115,10 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
       );
     },
     cruxBurst() {
+      if (use3D) {
+        battle3d.current?.cruxBurst();
+        return;
+      }
       cruxRing.setValue(0);
       Animated.parallel([
         Animated.timing(cruxRing, { toValue: 1, duration: 620, useNativeDriver: false }),
@@ -108,6 +129,10 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
       ]).start();
     },
     itemFlash(tint = "#7ddba0") {
+      if (use3D) {
+        battle3d.current?.itemFlash(tint);
+        return;
+      }
       setItemTint(tint);
       Animated.sequence([
         Animated.timing(itemWash, { toValue: 0.5, duration: 160, useNativeDriver: false }),
@@ -139,8 +164,19 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
   const cruxRingOpacity = cruxRing.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0, 0.75, 0] });
 
   return (
-    <View style={styles.stage} onLayout={(e) => setStageWidth(e.nativeEvent.layout.width)}>
-      <BattleBackdrop biome={biome} width={stageWidth} height={STAGE_HEIGHT} />
+    <View style={[styles.stage, use3D && styles.stage3D]} onLayout={(e) => setStageWidth(e.nativeEvent.layout.width)}>
+      {use3D ? (
+        <Battle3D
+          ref={battle3d}
+          biome={biome}
+          enemy={{ speciesId: enemy.speciesId, types: enemy.types, anim: enemy.anim }}
+          player={{ speciesId: player.speciesId, types: player.types, anim: player.anim }}
+        />
+      ) : (
+        <BattleBackdrop biome={biome} width={stageWidth} height={STAGE_HEIGHT} />
+      )}
+      {!use3D && (
+        <>
 
       <Animated.View pointerEvents="none" style={[styles.fullWash, { opacity: cruxWash, backgroundColor: "#f3c14a" }]} />
       <Animated.View pointerEvents="none" style={[styles.fullWash, { opacity: itemWash, backgroundColor: itemTint }]} />
@@ -164,7 +200,10 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
         <BattlePlatform size={PLAYER_AVATAR_SIZE * 1.45} biome={biome} />
       </View>
 
-      <View style={[styles.infoBox, styles.enemyInfoBox]}>
+        </>
+      )}
+
+      <View style={[styles.infoBox, styles.enemyInfoBox, use3D && styles.infoBox3D]}>
         <View style={styles.infoHeader}>
           <Text style={styles.infoName}>{enemy.name}</Text>
           <Text style={styles.infoLevel}>{t("common.level", { level: enemy.level })}</Text>
@@ -177,7 +216,7 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
         <HpBar currentHp={enemy.hp} maxHp={enemy.maxHp} />
       </View>
 
-      <View style={[styles.infoBox, styles.playerInfoBox, player.highlightCrux && styles.playerInfoBoxCrux]}>
+      <View style={[styles.infoBox, styles.playerInfoBox, use3D && styles.infoBox3D, player.highlightCrux && styles.playerInfoBoxCrux]}>
         <View style={styles.infoHeader}>
           <Text style={styles.infoName}>{player.name}</Text>
           <Text style={styles.infoLevel}>{t("common.level", { level: player.level })}</Text>
@@ -190,6 +229,9 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
         <HpBar currentHp={player.hp} maxHp={player.maxHp} />
         {player.highlightCrux && <Text style={styles.cruxActiveLabel}>{t("battle.cruxActive")}</Text>}
       </View>
+
+      {!use3D && (
+        <>
 
       <Animated.View
         pointerEvents="none"
@@ -293,11 +335,25 @@ export const BattleStage = forwardRef<BattleStageHandle, Props>(function BattleS
       >
         <Text style={styles.ballGlyph}>⚪</Text>
       </Animated.View>
+        </>
+      )}
     </View>
   );
 });
 
 const styles = StyleSheet.create({
+  // Over a 3D scene the plates slim down and let the world show through a little.
+  infoBox3D: {
+    width: "46%",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: "rgba(255,255,255,0.86)",
+    gap: 3,
+  },
+  stage3D: {
+    height: STAGE_HEIGHT_3D,
+    backgroundColor: "#cfe8f5",
+  },
   stage: {
     height: STAGE_HEIGHT,
     borderRadius: 14,
